@@ -14,4 +14,6 @@ public interface TicketServer {
 
   public int[] delete(String name);
 
+  public int getId();
+
 }

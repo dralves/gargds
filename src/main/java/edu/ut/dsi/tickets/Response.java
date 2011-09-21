@@ -11,7 +11,7 @@ import java.util.Arrays;
  * @author dralves
  * 
  */
-public class Response {
+public class Response implements Writable {
 
   private int[]             values;
   public static final int[] ERROR     = new int[] { -2 };

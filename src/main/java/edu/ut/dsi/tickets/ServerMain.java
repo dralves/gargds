@@ -3,7 +3,7 @@ package edu.ut.dsi.tickets;
 import java.io.IOException;
 
 import edu.ut.dsi.tickets.server.ServerCommManager;
-import edu.ut.dsi.tickets.server.SingleTicketServer;
+import edu.ut.dsi.tickets.server.ReservationManager;
 import edu.ut.dsi.tickets.server.TicketServer;
 
 public class ServerMain {
@@ -15,7 +15,7 @@ public class ServerMain {
     if (args.length > 2) {
       numSeats = Integer.parseInt(args[2]);
     }
-    TicketServer server = new SingleTicketServer(numSeats);
+    TicketServer server = new ReservationManager(numSeats, 0);
     ServerCommManager manager = new ServerCommManager(server, address, port);
     manager.start();
   }

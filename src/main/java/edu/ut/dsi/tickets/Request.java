@@ -10,7 +10,7 @@ import java.io.IOException;
  * @author dralves
  * 
  */
-public class Request {
+public class Request implements Writable {
 
   public enum Method {
     RESERVE, SEARCH, DELETE;

@@ -2,13 +2,13 @@ package edu.ut.dsi.tickets;
 
 import org.junit.BeforeClass;
 
-import edu.ut.dsi.tickets.server.SingleTicketServer;
+import edu.ut.dsi.tickets.server.ReservationManager;
 
 public class SingleTicktetServerTest extends TicketServerTest {
 
   @BeforeClass
   public static void setUp() {
-    server = new SingleTicketServer(10);
+    server = new ReservationManager(10);
   }
 
 }

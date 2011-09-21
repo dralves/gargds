@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import edu.ut.dsi.tickets.Response;
 
-public class SingleTicketServer implements TicketServer {
+public class ReservationManager implements TicketServer {
 
   private static class Seat {
 
@@ -27,13 +27,15 @@ public class SingleTicketServer implements TicketServer {
   private final Map<String, int[]> reservations = new HashMap<String, int[]>();
   private final ReadWriteLock      lock         = new ReentrantReadWriteLock();
   private final AtomicInteger      freeSeats;
+  private int                      id;
 
-  public SingleTicketServer(int numSeats) {
+  public ReservationManager(int numSeats, int id) {
     allSeats = new ArrayList<Seat>();
     for (int i = 0; i < numSeats; i++) {
       allSeats.add(new Seat(i));
     }
     freeSeats = new AtomicInteger(numSeats);
+    this.id = id;
   }
 
   public int[] reserve(String name, int count) {
@@ -98,5 +100,9 @@ public class SingleTicketServer implements TicketServer {
     }
     freeSeats.addAndGet(-count);
     return vacant;
+  }
+
+  public int getId() {
+    return this.id;
   }
 }
