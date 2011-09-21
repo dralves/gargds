@@ -8,7 +8,7 @@ public class SingleTicktetServerTest extends TicketServerTest {
 
   @BeforeClass
   public static void setUp() {
-    server = new ReservationManager(10);
+    server = new ReservationManager(10, 0);
   }
 
 }

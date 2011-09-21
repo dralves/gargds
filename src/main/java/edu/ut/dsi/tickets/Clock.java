@@ -16,25 +16,25 @@ public class Clock {
 
   public static class Timestamp implements Writable {
 
-    public int ddClockValue;
+    public int time;
 
     public Timestamp() {
     }
 
     public Timestamp(int clockValue) {
-      this.ddClockValue = clockValue;
+      this.time = clockValue;
     }
 
     public void write(DataOutput out) throws IOException {
-      out.writeInt(ddClockValue);
+      out.writeInt(time);
     }
 
     public void read(DataInput in) throws IOException {
-      this.ddClockValue = in.readInt();
+      this.time = in.readInt();
     };
 
     public int value() {
-      return ddClockValue;
+      return time;
     }
   }
 

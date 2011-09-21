@@ -5,8 +5,8 @@ import java.util.concurrent.Executors;
 
 import org.junit.Test;
 
-import edu.ut.dsi.tickets.ClientServerTicketServerTest.TicketServerClient;
 import edu.ut.dsi.tickets.client.TicketClient;
+import edu.ut.dsi.tickets.client.TicketServerClient;
 import edu.ut.dsi.tickets.server.TicketServer;
 
 public class DeadlockTest {
@@ -23,8 +23,8 @@ public class DeadlockTest {
       }
     });
     Thread.sleep(500);
-    TicketServer client1 = new TicketServerClient(new TicketClient("localhost", 60000));
-    TicketServer client2 = new TicketServerClient(new TicketClient("localhost", 60000));
+    TicketServer client1 = new TicketServerClient(new TicketClient("localhost", 60000), 0);
+    TicketServer client2 = new TicketServerClient(new TicketClient("localhost", 60000), 0);
     client1.reserve("david", 10);
     client2.reserve("john", 3);
     client1.delete("david");

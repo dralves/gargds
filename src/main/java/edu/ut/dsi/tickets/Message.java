@@ -6,10 +6,16 @@ import java.io.IOException;
 
 import edu.ut.dsi.tickets.Clock.Timestamp;
 
+/**
+ * A wapper for a {@link Request} or {@link Response} that includes a timestamp, in order to deal with clocks.
+ * 
+ * @author dralves
+ * 
+ */
 public class Message implements Writable {
 
   /**
-   * Type fo the msg, more types can be added later.
+   * Type for the msg, more types can be added later.
    * 
    * @author dralves
    * 

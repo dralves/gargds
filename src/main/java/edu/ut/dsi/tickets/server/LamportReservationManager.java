@@ -2,7 +2,10 @@ package edu.ut.dsi.tickets.server;
 
 public class LamportReservationManager extends ReservationManager {
 
-  public LamportReservationManager() {
-    super(0, 0);
+  private TicketServer[] otherServers;
+
+  public LamportReservationManager(TicketServer[] otherServers, int numSeats) {
+    super(otherServers.length, numSeats);
+    this.otherServers = otherServers;
   }
 }
