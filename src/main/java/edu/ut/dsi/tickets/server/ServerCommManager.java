@@ -58,6 +58,7 @@ public class ServerCommManager {
   private String             address;
   private int                port;
   private ExecutorService    handlers;
+  private ServerSocket       ss;
 
   public ServerCommManager(TicketServer server, String address, int port) {
     this.server = server;
@@ -67,19 +68,28 @@ public class ServerCommManager {
   }
 
   public void start() throws IOException {
-    ServerSocket ss = new ServerSocket();
+    this.ss = new ServerSocket();
     ss.bind(new InetSocketAddress(Inet4Address.getByName(this.address), this.port));
     System.out.println("TicketServer listening on: " + this.address + ":" + this.port);
-    while (true) {
-      Socket socket = ss.accept();
-      InetSocketAddress sa = (InetSocketAddress) socket.getRemoteSocketAddress();
-      System.out.println("New client from: " + sa.getHostName() + ":" + sa.getPort());
-      handlers.submit(new RequestHandler(this.server, socket));
-    }
+    Executors.newSingleThreadExecutor().submit(new Runnable() {
+      public void run() {
+        try {
+          while (true) {
+            Socket socket = ss.accept();
+            InetSocketAddress sa = (InetSocketAddress) socket.getRemoteSocketAddress();
+            System.out.println("New client from: " + sa.getHostName() + ":" + sa.getPort());
+            handlers.submit(new RequestHandler(server, socket));
+          }
+        } catch (IOException e) {
+          throw new RuntimeException("Error in acceptor thread.", e);
+        }
+      }
+    });
+
   }
 
-  public void stop() {
-
+  public void stop() throws IOException {
+    ss.close();
   }
 
 }
