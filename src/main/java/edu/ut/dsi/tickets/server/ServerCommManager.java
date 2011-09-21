@@ -59,6 +59,7 @@ public class ServerCommManager {
   private int                port;
   private ExecutorService    handlers;
   private ServerSocket       ss;
+  private ExecutorService    acceptorExecutor;
 
   public ServerCommManager(TicketServer server, String address, int port) {
     this.server = server;
@@ -71,7 +72,8 @@ public class ServerCommManager {
     this.ss = new ServerSocket();
     ss.bind(new InetSocketAddress(Inet4Address.getByName(this.address), this.port));
     System.out.println("TicketServer listening on: " + this.address + ":" + this.port);
-    Executors.newSingleThreadExecutor().submit(new Runnable() {
+    this.acceptorExecutor = Executors.newSingleThreadExecutor();
+    this.acceptorExecutor.submit(new Runnable() {
       public void run() {
         try {
           while (true) {
@@ -85,10 +87,10 @@ public class ServerCommManager {
         }
       }
     });
-
   }
 
   public void stop() throws IOException {
+    acceptorExecutor.shutdownNow();
     ss.close();
   }
 
