@@ -2,8 +2,8 @@ package edu.ut.dsi.tickets.client;
 
 import java.io.IOException;
 
-import edu.ut.dsi.tickets.Request;
-import edu.ut.dsi.tickets.Request.Method;
+import edu.ut.dsi.tickets.MethodRequest;
+import edu.ut.dsi.tickets.MethodRequest.Method;
 import edu.ut.dsi.tickets.server.TicketServer;
 
 /**
@@ -25,7 +25,7 @@ public class TicketServerClient implements TicketServer {
 
   public int[] delete(String name) {
     try {
-      return this.client.send(new Request(Method.DELETE, name)).values();
+      return this.client.send(new MethodRequest(Method.DELETE, name)).values();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -33,7 +33,7 @@ public class TicketServerClient implements TicketServer {
 
   public int[] reserve(String name, int count) {
     try {
-      return this.client.send(new Request(Method.RESERVE, name, count)).values();
+      return this.client.send(new MethodRequest(Method.RESERVE, name, count)).values();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -41,13 +41,13 @@ public class TicketServerClient implements TicketServer {
 
   public int[] search(String name) {
     try {
-      return this.client.send(new Request(Method.SEARCH, name)).values();
+      return this.client.send(new MethodRequest(Method.SEARCH, name)).values();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public int getId() {
+  public int id() {
     return this.id;
   }
 

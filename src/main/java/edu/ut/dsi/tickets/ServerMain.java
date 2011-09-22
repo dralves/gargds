@@ -1,14 +1,15 @@
 package edu.ut.dsi.tickets;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import edu.ut.dsi.tickets.server.ReservationManager;
-import edu.ut.dsi.tickets.server.ServerCommManager;
+import edu.ut.dsi.tickets.server.Comms;
 import edu.ut.dsi.tickets.server.TicketServer;
 
 public class ServerMain {
 
-  private static ServerCommManager manager;
+  private static Comms manager;
 
   public synchronized static void main(String... args) throws IOException {
     String address = args[0];
@@ -17,8 +18,8 @@ public class ServerMain {
     if (args.length > 2) {
       numSeats = Integer.parseInt(args[2]);
     }
-    TicketServer server = new ReservationManager(numSeats, 0);
-    manager = new ServerCommManager(server, address, port);
+    TicketServer server = new ReservationManager(numSeats, 0, new ReentrantReadWriteLock());
+    manager = new Comms(server, address, port);
     manager.start();
   }
 

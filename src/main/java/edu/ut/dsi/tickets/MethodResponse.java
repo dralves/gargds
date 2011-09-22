@@ -11,17 +11,17 @@ import java.util.Arrays;
  * @author dralves
  * 
  */
-public class Response implements Writable {
+public class MethodResponse implements Writable {
 
   private int[]             values;
   public static final int[] ERROR     = new int[] { -2 };
   public static final int[] NOT_FOUND = new int[] { -1 };
 
-  public Response() {
+  public MethodResponse() {
 
   }
 
-  public Response(int[] values) {
+  public MethodResponse(int[] values) {
     this.values = values;
   }
 

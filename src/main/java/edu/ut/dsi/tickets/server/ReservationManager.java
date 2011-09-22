@@ -6,9 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import edu.ut.dsi.tickets.Response;
+import edu.ut.dsi.tickets.MethodResponse;
 
 public class ReservationManager implements TicketServer {
 
@@ -25,27 +24,28 @@ public class ReservationManager implements TicketServer {
 
   private final List<Seat>         allSeats;
   private final Map<String, int[]> reservations = new HashMap<String, int[]>();
-  private final ReadWriteLock      lock         = new ReentrantReadWriteLock();
+  private final ReadWriteLock      lock;
   private final AtomicInteger      freeSeats;
   private int                      id;
 
-  public ReservationManager(int numSeats, int id) {
+  public ReservationManager(int numSeats, int id, ReadWriteLock lock) {
     allSeats = new ArrayList<Seat>();
     for (int i = 0; i < numSeats; i++) {
       allSeats.add(new Seat(i));
     }
     freeSeats = new AtomicInteger(numSeats);
     this.id = id;
+    this.lock = lock;
   }
 
   public int[] reserve(String name, int count) {
     lock.writeLock().lock();
     try {
       if (reservations.containsKey(name)) {
-        return Response.ERROR;
+        return MethodResponse.ERROR;
       }
       if (freeSeats.get() < count) {
-        return Response.NOT_FOUND;
+        return MethodResponse.NOT_FOUND;
       }
       int[] seats = findVacant(count);
       reservations.put(name, seats);
@@ -59,7 +59,7 @@ public class ReservationManager implements TicketServer {
     lock.readLock().lock();
     try {
       int[] seats = reservations.get(name);
-      return seats == null ? Response.NOT_FOUND : seats;
+      return seats == null ? MethodResponse.NOT_FOUND : seats;
     } finally {
       lock.readLock().unlock();
     }
@@ -69,10 +69,10 @@ public class ReservationManager implements TicketServer {
   public int[] delete(String name) {
     lock.writeLock().lock();
     try {
-      if (search(name) != Response.NOT_FOUND) {
+      if (reservations.get(name) != MethodResponse.NOT_FOUND) {
         return freeSeats(reservations.remove(name));
       }
-      return Response.NOT_FOUND;
+      return MethodResponse.NOT_FOUND;
     } finally {
       lock.writeLock().unlock();
     }
@@ -102,7 +102,7 @@ public class ReservationManager implements TicketServer {
     return vacant;
   }
 
-  public int getId() {
+  public int id() {
     return this.id;
   }
 }

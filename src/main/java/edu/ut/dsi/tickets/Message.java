@@ -4,15 +4,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import edu.ut.dsi.tickets.Clock.Timestamp;
+import edu.ut.dsi.tickets.mutex.Clock.Timestamp;
+import edu.ut.dsi.tickets.mutex.MutexAck;
+import edu.ut.dsi.tickets.mutex.MutexRel;
+import edu.ut.dsi.tickets.mutex.MutexReq;
 
 /**
- * A wapper for a {@link Request} or {@link Response} that includes a timestamp, in order to deal with clocks.
+ * A wrapper for any mesasge that includes a timestamp, in order to deal with clocks.
  * 
  * @author dralves
  * 
  */
-public class Message implements Writable {
+public class Message<T extends Writable> implements Writable {
 
   /**
    * Type for the msg, more types can be added later.
@@ -21,51 +24,59 @@ public class Message implements Writable {
    * 
    */
   public enum MsgType {
-    REQUEST, RESPONSE
+    REQUEST(MethodRequest.class),
+    RESPONSE(MethodResponse.class),
+    CS_REQ(MutexReq.class),
+    CS_REL(MutexRel.class),
+    ACK(MutexAck.class);
+
+    Class<? extends Writable> payloadClass;
+
+    private MsgType(Class<? extends Writable> payloadClass) {
+      this.payloadClass = payloadClass;
+    }
+
+    public Class<? extends Writable> payloadClass() {
+      return this.payloadClass;
+    }
+
   }
 
   private Timestamp ts;
   private int       senderId;
-  private Request   req;
-  private Response  res;
+  private T         value;
   private MsgType   type;
 
-  public Message(Timestamp ts, Request request, int senderId) {
+  public Message(MsgType type, Timestamp ts, int senderId, T payload) {
     this.ts = ts;
-    this.req = request;
-    this.type = MsgType.REQUEST;
+    this.type = type;
     this.senderId = senderId;
+    this.value = payload;
   }
 
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.senderId);
     this.ts.write(out);
     out.write(this.type.ordinal());
-    switch (type) {
-      case REQUEST:
-        this.req.write(out);
-        break;
-      case RESPONSE:
-        this.res.write(out);
-        break;
-    }
+    this.value.write(out);
   }
 
+  @SuppressWarnings("unchecked")
   public void read(DataInput in) throws IOException {
     this.senderId = in.readInt();
     this.ts = new Timestamp();
     this.ts.read(in);
     this.type = MsgType.values()[in.readInt()];
-    switch (this.type) {
-      case REQUEST:
-        this.req = new Request();
-        this.req.read(in);
-        break;
-      case RESPONSE:
-        this.res = new Response();
-        this.res.read(in);
-        break;
+    try {
+      this.value = (T) this.type.payloadClass().newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Error instanciating payload.", e);
     }
+    this.value.read(in);
+  }
+
+  public MsgType type() {
+    return this.type;
   }
 
   public int senderId() {

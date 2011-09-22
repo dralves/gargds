@@ -7,8 +7,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import edu.ut.dsi.tickets.Request;
-import edu.ut.dsi.tickets.Response;
+import edu.ut.dsi.tickets.MethodRequest;
+import edu.ut.dsi.tickets.MethodResponse;
 
 public class TicketClient {
 
@@ -26,9 +26,9 @@ public class TicketClient {
     this.socket.connect(new InetSocketAddress(this.address, this.port));
   }
 
-  public Response send(Request request) throws IOException {
+  public MethodResponse send(MethodRequest request) throws IOException {
     request.write(new DataOutputStream(socket.getOutputStream()));
-    Response response = new Response();
+    MethodResponse response = new MethodResponse();
     response.read(new DataInputStream(socket.getInputStream()));
     return response;
   }

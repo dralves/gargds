@@ -18,7 +18,7 @@ public abstract class TicketServerTest {
   public void testReserveMoreSeatsThatAvailable() throws Exception {
     int[] seats = server.reserve("test", 11);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
-        arrayEquals(seats, Response.NOT_FOUND));
+        arrayEquals(seats, MethodResponse.NOT_FOUND));
   }
 
   @Test
@@ -40,7 +40,7 @@ public abstract class TicketServerTest {
   public void testReservationsFull() {
     int[] result = server.reserve("eva", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(result) + ")",
-        arrayEquals(result, Response.NOT_FOUND));
+        arrayEquals(result, MethodResponse.NOT_FOUND));
   }
 
   @Test
@@ -70,7 +70,7 @@ public abstract class TicketServerTest {
     // should be full again
     int[] result = server.reserve("harry", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(result) + ")",
-        arrayEquals(result, Response.NOT_FOUND));
+        arrayEquals(result, MethodResponse.NOT_FOUND));
   }
 
   private boolean arrayEquals(int[] a1, int[] a2) {

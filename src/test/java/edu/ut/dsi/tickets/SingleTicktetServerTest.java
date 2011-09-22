@@ -1,5 +1,7 @@
 package edu.ut.dsi.tickets;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -9,7 +11,7 @@ public class SingleTicktetServerTest extends TicketServerTest {
 
   @BeforeClass
   public synchronized static void setUp() {
-    server = new ReservationManager(10, 0);
+    server = new ReservationManager(10, 0, new ReentrantReadWriteLock());
   }
 
   @AfterClass

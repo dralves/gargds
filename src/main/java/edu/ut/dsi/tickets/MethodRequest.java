@@ -10,7 +10,7 @@ import java.io.IOException;
  * @author dralves
  * 
  */
-public class Request implements Writable {
+public class MethodRequest implements Writable {
 
   public enum Method {
     RESERVE, SEARCH, DELETE;
@@ -20,14 +20,14 @@ public class Request implements Writable {
   private String name;
   private int    count;
 
-  public Request() {
+  public MethodRequest() {
   }
 
-  public Request(Method method, String name) {
+  public MethodRequest(Method method, String name) {
     this(method, name, -1);
   }
 
-  public Request(Method method, String name, int count) {
+  public MethodRequest(Method method, String name, int count) {
     this.method = method;
     this.name = name;
     this.count = count;

@@ -1,8 +1,12 @@
-package edu.ut.dsi.tickets;
+package edu.ut.dsi.tickets.mutex;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import edu.ut.dsi.tickets.Message;
+import edu.ut.dsi.tickets.Message.MsgType;
+import edu.ut.dsi.tickets.Writable;
 
 /**
  * An implementation of a direct dependency clock. Right now as the only clock that is need is a ddclock this is the
@@ -50,18 +54,22 @@ public class Clock {
     clock[myId]++;
   }
 
-  public int procTime(int procId) {
+  public int time(int procId) {
     return clock[procId];
   }
 
-  public Message sendMessage(Request request) {
-    Timestamp ts = new Timestamp(procTime(myId));
-    Message msg = new Message(ts, request, myId);
+  public int time() {
+    return clock[myId];
+  }
+
+  public <T extends Writable> Message<T> newOutMsg(MsgType type, T payload) {
+    Timestamp ts = new Timestamp(time(myId));
+    Message<T> msg = new Message<T>(type, ts, myId, payload);
     tick();
     return msg;
   }
 
-  public void receiveMessage(Message msg) {
+  public void newInMsg(Message<?> msg) {
     clock[msg.senderId()] = Math.max(clock[msg.senderId()], msg.ts().value());
     clock[myId] = Math.max(clock[myId], msg.ts().value());
   }

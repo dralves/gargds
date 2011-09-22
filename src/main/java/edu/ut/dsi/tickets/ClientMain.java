@@ -6,7 +6,7 @@ import java.io.InputStreamReader;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
-import edu.ut.dsi.tickets.Request.Method;
+import edu.ut.dsi.tickets.MethodRequest.Method;
 import edu.ut.dsi.tickets.client.TicketClient;
 
 public class ClientMain {
@@ -18,7 +18,7 @@ public class ClientMain {
     while (true) {
       Method method;
       String name;
-      Request request;
+      MethodRequest request;
       try {
         System.out.print("Method? (RESERVE,SEARCH,DELETE): ");
         method = Method.valueOf(reader.readLine().trim().toUpperCase());
@@ -26,16 +26,16 @@ public class ClientMain {
         name = reader.readLine().trim().toLowerCase();
         if (method == Method.RESERVE) {
           System.out.print("Number of seats: ");
-          request = new Request(method, name, Integer.parseInt(reader.readLine().trim()));
+          request = new MethodRequest(method, name, Integer.parseInt(reader.readLine().trim()));
         } else {
-          request = new Request(method, name);
+          request = new MethodRequest(method, name);
         }
       } catch (Exception e) {
         System.out.println("Error building request.");
         continue;
       }
-      Response response = client.send(request);
-      if (arrayEquals(response.values(), Response.NOT_FOUND)) {
+      MethodResponse response = client.send(request);
+      if (arrayEquals(response.values(), MethodResponse.NOT_FOUND)) {
         switch (method) {
           case RESERVE:
             System.out.println("There weren't enough seats available to go through with your reservation");
@@ -43,7 +43,7 @@ public class ClientMain {
           default:
             System.out.println("There was no reservation under the name: " + name);
         }
-      } else if (arrayEquals(response.values(), Response.ERROR)) {
+      } else if (arrayEquals(response.values(), MethodResponse.ERROR)) {
         switch (method) {
           case RESERVE:
             System.out.println("There is already a reservation under name: " + name);
