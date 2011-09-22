@@ -130,6 +130,13 @@ public class Comms {
     });
   }
 
+  public void stop() throws IOException {
+    stopClientComms();
+    if (this.serverPort != -1) {
+      stopServerComms();
+    }
+  }
+
   public void stopClientComms() throws IOException {
     clientAcceptorExecutor.shutdownNow();
     clientSS.close();
