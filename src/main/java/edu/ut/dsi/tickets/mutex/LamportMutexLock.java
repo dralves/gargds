@@ -79,7 +79,7 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
       case CS_REQ:
         queue[msg.senderId()] = ((MutexReq) msg.value()).qi;
         LOG.debug("Process " + clock.myId() + " received CS request from " + msg.senderId() + " at " + clock.time()
-            + " and is about to ack.");
+            + " and is about to ACK.");
         comms.send(msg.senderId(), clock.newOutMsg(MsgType.ACK, new MutexAck()));
         break;
       case CS_REL:

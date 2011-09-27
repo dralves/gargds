@@ -17,7 +17,12 @@ public class ServerMain {
 
   private static Comms manager;
 
-  public synchronized static void main(String... args) throws IOException {
+  public synchronized static void main(String... args) throws Exception {
+    Comms comms = new ServerMain().start(args);
+    comms.wait();
+  }
+
+  public Comms start(String[] args) throws IOException {
     int assgnmt = Integer.parseInt(args[0]);
     String address = args[1];
     int clientPort = Integer.parseInt(args[2]);
@@ -47,6 +52,7 @@ public class ServerMain {
         throw new IllegalStateException();
     }
     manager.start();
+    return manager;
   }
 
   public synchronized static void stop() throws IOException {

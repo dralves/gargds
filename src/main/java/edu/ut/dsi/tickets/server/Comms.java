@@ -123,7 +123,7 @@ public class Comms {
               LOG.debug("Updating lock and clock on join request.");
               lock.receive(msg);
               LOG.debug("Process " + this.remote.id + " join completed");
-              continue;
+              break;
             default:
               throw new IllegalStateException();
           }
@@ -170,14 +170,7 @@ public class Comms {
   public void sendToAll(Message<?> msg) {
     LOG.debug("Sending message to all servers.");
     for (ServerInfo ticketServer : remoteServers()) {
-      try {
-        LOG.debug("Sending Message to server. [Msg: " + msg + ", Server: " + ticketServer + "]");
-        getReplica(ticketServer).receive(msg);
-        LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + ticketServer + "]");
-      } catch (IOException e) {
-        LOG.error("Error sending to process: " + ticketServer, e);
-        fd.suspect(ticketServer.id, e);
-      }
+      send(ticketServer.id, msg);
     }
   }
 
@@ -223,7 +216,13 @@ public class Comms {
     synchronized (otherServers) {
       TicketServerReplica replica = otherServers.get(remote);
       if (replica == null) {
-        replica = new RemoteReplica(new TicketClient(remote.address, remote.serverPort), remote, me);
+        TicketClient client = new TicketClient(remote.address, remote.serverPort);
+        client.connect();
+
+        serverHandlers.submit(new ServerRequestHandler(resMgmt, client.socket()));
+
+        replica = new RemoteReplica(client, remote, me);
+
         otherServers.put(remote, replica);
       }
       return replica;

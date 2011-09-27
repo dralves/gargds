@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import edu.ut.dsi.tickets.MethodRequest;
 import edu.ut.dsi.tickets.MethodResponse;
@@ -23,7 +21,6 @@ public class TicketClient {
     this.address = serverAddress;
     this.port = port;
     this.existingSocket = false;
-    connect();
   }
 
   public TicketClient(Socket socket) {
@@ -31,20 +28,30 @@ public class TicketClient {
     this.existingSocket = true;
   }
 
-  private void connect() throws UnknownHostException, IOException {
+  public void connect() throws UnknownHostException, IOException {
     this.socket = new Socket();
     this.socket.connect(new InetSocketAddress(this.address, this.port));
   }
 
+  public boolean isConnected() {
+    return this.socket != null ? this.socket.isConnected() : false;
+  }
+
   public MethodResponse send(MethodRequest request) throws IOException {
     request.write(new DataOutputStream(socket.getOutputStream()));
+    System.out.println("REQ WROTE: " + request);
     MethodResponse response = new MethodResponse();
     response.read(new DataInputStream(socket.getInputStream()));
+    System.out.println("RESP READ: " + request);
     return response;
   }
 
   public boolean isExistingSocket() {
     return existingSocket;
+  }
+
+  public Socket socket() {
+    return this.socket;
   }
 
 }
