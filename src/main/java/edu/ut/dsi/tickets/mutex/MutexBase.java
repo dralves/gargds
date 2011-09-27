@@ -8,7 +8,7 @@ import edu.ut.dsi.tickets.Writable;
 
 public abstract class MutexBase implements Writable {
 
-  private int qi;
+  protected int qi;
 
   public MutexBase(int qi) {
     this.qi = qi;
@@ -18,7 +18,7 @@ public abstract class MutexBase implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    out.write(qi);
+    out.writeInt(qi);
   }
 
   public void read(DataInput in) throws IOException {

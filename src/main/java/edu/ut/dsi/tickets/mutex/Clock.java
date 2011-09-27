@@ -35,11 +35,17 @@ public class Clock {
 
     public void read(DataInput in) throws IOException {
       this.time = in.readInt();
-    };
+    }
 
     public int value() {
       return time;
     }
+
+    @Override
+    public String toString() {
+      return "Timestamp [time=" + time + "]";
+    }
+
   }
 
   private int[] clock;
@@ -60,6 +66,10 @@ public class Clock {
 
   public int time() {
     return clock[myId];
+  }
+
+  public int myId() {
+    return myId;
   }
 
   public <T extends Writable> Message<T> newOutMsg(MsgType type, T payload) {

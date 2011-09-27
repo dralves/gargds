@@ -10,4 +10,9 @@ public class MutexRel extends MutexBase {
     super();
   }
 
+  @Override
+  public String toString() {
+    return "MutexRel [qi=" + qi + "]";
+  }
+
 }

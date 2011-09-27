@@ -21,12 +21,15 @@ public class TicketClient {
     this.port = port;
   }
 
-  public void connect() throws UnknownHostException, IOException {
-    this.socket = new Socket();
-    this.socket.connect(new InetSocketAddress(this.address, this.port));
+  private void connect() throws UnknownHostException, IOException {
+    if (socket == null) {
+      this.socket = new Socket();
+      this.socket.connect(new InetSocketAddress(this.address, this.port));
+    }
   }
 
   public MethodResponse send(MethodRequest request) throws IOException {
+    connect();
     request.write(new DataOutputStream(socket.getOutputStream()));
     MethodResponse response = new MethodResponse();
     response.read(new DataInputStream(socket.getInputStream()));

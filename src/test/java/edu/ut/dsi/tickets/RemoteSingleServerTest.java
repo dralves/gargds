@@ -6,14 +6,14 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import edu.ut.dsi.tickets.client.TicketClient;
-import edu.ut.dsi.tickets.client.TicketServerClient;
+import edu.ut.dsi.tickets.client.RemoteServer;
 
-public class ClientServerTicketServerTest extends TicketServerTest {
+public class RemoteSingleServerTest extends TicketServerTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    ServerMain.main("localhost", "60000");
-    server = new TicketServerClient(new TicketClient("localhost", 60000), 0);
+    ServerMain.main(1 + "", "localhost", "60000");
+    server = new RemoteServer(new TicketClient("localhost", 60000));
   }
 
   @AfterClass

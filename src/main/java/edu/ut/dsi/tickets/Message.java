@@ -47,6 +47,9 @@ public class Message<T extends Writable> implements Writable {
   private T         value;
   private MsgType   type;
 
+  public Message() {
+  }
+
   public Message(MsgType type, Timestamp ts, int senderId, T payload) {
     this.ts = ts;
     this.type = type;
@@ -57,13 +60,14 @@ public class Message<T extends Writable> implements Writable {
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.senderId);
     this.ts.write(out);
-    out.write(this.type.ordinal());
+    out.writeInt(this.type.ordinal());
     this.value.write(out);
   }
 
   @SuppressWarnings("unchecked")
   public void read(DataInput in) throws IOException {
     this.senderId = in.readInt();
+
     this.ts = new Timestamp();
     this.ts.read(in);
     this.type = MsgType.values()[in.readInt()];
@@ -86,4 +90,10 @@ public class Message<T extends Writable> implements Writable {
   public Timestamp ts() {
     return ts;
   }
+
+  @Override
+  public String toString() {
+    return "Message [ts=" + ts + ", senderId=" + senderId + ", value=" + value + ", type=" + type + "]";
+  }
+
 }

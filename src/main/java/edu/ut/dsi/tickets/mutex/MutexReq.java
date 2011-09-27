@@ -10,4 +10,9 @@ public class MutexReq extends MutexBase {
     super();
   }
 
+  @Override
+  public String toString() {
+    return "MutexReq [qi=" + qi + "]";
+  }
+
 }

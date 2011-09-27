@@ -18,7 +18,6 @@ public class MethodResponse implements Writable {
   public static final int[] NOT_FOUND = new int[] { -1 };
 
   public MethodResponse() {
-
   }
 
   public MethodResponse(int[] values) {

@@ -13,7 +13,6 @@ public class ClientMain {
 
   public static void main(String[] args) throws UnknownHostException, IOException {
     TicketClient client = new TicketClient(args[0], Integer.parseInt(args[1]));
-    client.connect();
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
     while (true) {
       Method method;

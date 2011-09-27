@@ -4,25 +4,62 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 
+import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
+import java.util.Map;
 
+import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ErrorCollector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.ut.dsi.tickets.server.TicketServer;
 
 public abstract class TicketServerTest {
 
+  private static final Logger   LOG       = LoggerFactory.getLogger(TicketServerTest.class);
+
   protected static TicketServer server;
 
-  @Test
+  static {
+    Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+      public void uncaughtException(Thread t, Throwable e) {
+        LOG.error("Uncaught Exception in thread: " + t.getName(), e);
+
+      }
+    });
+  }
+
+  @Rule
+  public ErrorCollector         collector = new ErrorCollector();
+
+  // @After1
+  public void dump() {
+    StringBuilder sb = new StringBuilder();
+    Map<Thread, StackTraceElement[]> stacks = Thread.getAllStackTraces();
+    for (Thread t : stacks.keySet()) {
+      sb.append(t.toString()).append('\n');
+      for (StackTraceElement ste : t.getStackTrace()) {
+        sb.append("\tat ").append(ste.toString()).append('\n');
+      }
+      sb.append('\n');
+    }
+    LOG.info(sb.toString());
+
+  }
+
+  @Test(timeout = 10000)
   public void testReserveMoreSeatsThatAvailable() throws Exception {
     int[] seats = server.reserve("test", 11);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, MethodResponse.NOT_FOUND));
   }
 
-  @Test
-  public void testReserve() {
+  @Test(timeout = 100000)
+  public void testReserve() throws IOException {
     int[] seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
     seats = server.reserve("bob", 2);
@@ -36,23 +73,23 @@ public abstract class TicketServerTest {
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
   }
 
-  @Test
-  public void testReservationsFull() {
+  @Test(timeout = 100000)
+  public void testReservationsFull() throws IOException {
     int[] result = server.reserve("eva", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(result) + ")",
         arrayEquals(result, MethodResponse.NOT_FOUND));
   }
 
-  @Test
-  public void testSearch() {
+  @Test(timeout = 100000)
+  public void testSearch() throws IOException {
     int[] seats = server.search("alice");
     assertNotNull(seats);
     assertSame(1, seats.length);
     assertSame(0, seats[0]);
   }
 
-  @Test
-  public void testDelete() {
+  @Test(timeout = 100000)
+  public void testDelete() throws IOException {
     // empty some seats (from a full server)
     int[] seats = server.delete("david");
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",

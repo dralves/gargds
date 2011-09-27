@@ -1,10 +1,12 @@
 package edu.ut.dsi.tickets.mutex;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.Message.MsgType;
@@ -21,38 +23,52 @@ import edu.ut.dsi.tickets.server.Comms;
  */
 public class LamportMutexLock implements Lock, ReadWriteLock {
 
-  private Clock          clock;
-  private Comms          comms;
-  private int[]          queue;
-  private int            myId;
+  private static final Logger LOG = LoggerFactory.getLogger(LamportMutexLock.class);
 
-  // latches to help in waiting until everything is dandy before either locking or unlocking the critical section.
-  private CountDownLatch reqLatch;
+  private Clock               clock;
+  private Comms               comms;
+  private int[]               queue;
+  private int                 myId;
 
-  public LamportMutexLock(Clock clock, Comms comms) {
+  public LamportMutexLock(Clock clock) {
     this.clock = clock;
+  }
+
+  public void setComms(Comms comms) {
     this.comms = comms;
+    this.queue = new int[comms.remoteServers().size() + 1];
   }
 
   /**
    * Waits until the mutex has been acquired, only one thread at a time can call lock().
    */
-  public synchronized void lock() {
+  public void lock() {
     queue[myId] = clock.time();
+    LOG.debug("Process " + clock.myId() + " trying to aquire the lock at time: " + clock.time());
     Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REQ, new MutexReq(queue[myId]));
+    LOG.debug("Process " + clock.myId() + " broadcasting desire to acquire lock at time: " + clock.time());
     comms.sendToAll(msg);
-    reqLatch = new CountDownLatch(1);
+    while (!okCS()) {
+      LOG.debug("Process " + clock.myId() + " waiting to aquire the lock at time: " + clock.time());
+      myWait();
+    }
+    LOG.debug("Process " + clock.myId() + " acquired the lock at time: " + clock.time());
+  }
+
+  private synchronized void myWait() {
     try {
-      reqLatch.await();
+      wait();
     } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted while waiting for lock");
+      System.err.println(e);
     }
   }
 
-  public synchronized void unlock() {
+  public void unlock() {
     queue[myId] = Integer.MAX_VALUE;
     Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REL, new MutexReq(queue[myId]));
+    LOG.debug("Process " + clock.myId() + " about to send lock release messages at time: " + clock.time());
     comms.sendToAll(msg);
+    LOG.debug("Process " + clock.myId() + " released the lock at time: " + clock.time());
   }
 
   public void receive(Message<?> msg) {
@@ -70,10 +86,10 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
       default:
         throw new IllegalStateException();
     }
-    // see if we are allowed to enter the CSection
-    if (okCS()) {
-      reqLatch.countDown();
+    synchronized (clock) {
+      clock.notify();
     }
+
   }
 
   private boolean okCS() {

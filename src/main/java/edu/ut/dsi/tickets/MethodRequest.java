@@ -13,12 +13,20 @@ import java.io.IOException;
 public class MethodRequest implements Writable {
 
   public enum Method {
-    RESERVE, SEARCH, DELETE;
+    RESERVE,
+    SEARCH,
+    DELETE,
+    REPLICATE_PUT,
+    REPLICATE_DELETE,
+    RECEIVE
   }
 
-  private Method method;
-  private String name;
-  private int    count;
+  private Method     method;
+  // client-server args
+  private String     name;
+  private int        count;
+  // server-server args
+  private Message<?> msg;
 
   public MethodRequest() {
   }
@@ -33,19 +41,49 @@ public class MethodRequest implements Writable {
     this.count = count;
   }
 
-  public void write(DataOutput output) throws IOException {
-    output.writeInt(this.method.ordinal());
-    output.writeUTF(name);
-    if (this.method == Method.RESERVE) {
-      output.writeInt(count);
-    }
+  public MethodRequest(Method method, Message<?> message) {
+    this.method = method;
+    this.msg = message;
   }
 
+  public void write(DataOutput output) throws IOException {
+    output.writeInt(this.method.ordinal());
+    switch (this.method) {
+      case RESERVE:
+      case SEARCH:
+      case DELETE:
+      case REPLICATE_PUT:
+      case REPLICATE_DELETE:
+        output.writeUTF(name);
+        output.writeInt(count);
+        break;
+      case RECEIVE:
+        msg.write(output);
+        break;
+      default:
+        throw new IllegalStateException();
+    }
+
+  }
+
+  @SuppressWarnings("rawtypes")
   public void read(DataInput in) throws IOException {
     this.method = Method.values()[in.readInt()];
-    this.name = in.readUTF();
-    if (this.method == Method.RESERVE) {
-      this.count = in.readInt();
+    switch (this.method) {
+      case RESERVE:
+      case SEARCH:
+      case DELETE:
+      case REPLICATE_PUT:
+      case REPLICATE_DELETE:
+        this.name = in.readUTF();
+        this.count = in.readInt();
+        break;
+      case RECEIVE:
+        this.msg = new Message();
+        this.msg.read(in);
+        break;
+      default:
+        throw new IllegalStateException();
     }
   }
 
@@ -61,9 +99,14 @@ public class MethodRequest implements Writable {
     return name;
   }
 
+  @SuppressWarnings("unchecked")
+  public <T extends Writable> Message<T> msg() {
+    return (Message<T>) msg;
+  }
+
   @Override
   public String toString() {
-    return "Request [method=" + method + ", name=" + name + ", count=" + count + "]";
+    return "MethodRequest [method=" + method + ", name=" + name + ", count=" + count + ", msg=" + msg + "]";
   }
 
 }

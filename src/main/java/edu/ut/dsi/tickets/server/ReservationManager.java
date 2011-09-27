@@ -1,108 +1,87 @@
 package edu.ut.dsi.tickets.server;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
+import java.io.IOException;
+import java.util.concurrent.locks.Lock;
 
+import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.MethodResponse;
+import edu.ut.dsi.tickets.server.reservations.DuplicateNameException;
+import edu.ut.dsi.tickets.server.reservations.NotEnoughSeatsException;
+import edu.ut.dsi.tickets.server.reservations.ReservationStore;
+import edu.ut.dsi.tickets.server.reservations.UnknownReservationException;
 
-public class ReservationManager implements TicketServer {
+public class ReservationManager implements TicketServer, TicketServerReplica {
 
-  private static class Seat {
+  private final ReservationStore store;
+  private final Lock             lock;
+  private ServerInfo             info;
 
-    final int        number;
-    volatile boolean vacant;
-
-    public Seat(int number) {
-      this.number = number;
-      this.vacant = true;
-    }
-  }
-
-  private final List<Seat>         allSeats;
-  private final Map<String, int[]> reservations = new HashMap<String, int[]>();
-  private final ReadWriteLock      lock;
-  private final AtomicInteger      freeSeats;
-  private int                      id;
-
-  public ReservationManager(int numSeats, int id, ReadWriteLock lock) {
-    allSeats = new ArrayList<Seat>();
-    for (int i = 0; i < numSeats; i++) {
-      allSeats.add(new Seat(i));
-    }
-    freeSeats = new AtomicInteger(numSeats);
-    this.id = id;
+  public ReservationManager(ReservationStore store, Lock lock, ServerInfo info) {
     this.lock = lock;
+    this.store = store;
+    this.info = info;
   }
 
   public int[] reserve(String name, int count) {
-    lock.writeLock().lock();
+    lock.lock();
     try {
-      if (reservations.containsKey(name)) {
-        return MethodResponse.ERROR;
-      }
-      if (freeSeats.get() < count) {
-        return MethodResponse.NOT_FOUND;
-      }
-      int[] seats = findVacant(count);
-      reservations.put(name, seats);
-      return seats;
+      return store.put(name, count).seatMap();
+    } catch (NotEnoughSeatsException e) {
+      return MethodResponse.NOT_FOUND;
+    } catch (DuplicateNameException e) {
+      return MethodResponse.ERROR;
     } finally {
-      lock.writeLock().unlock();
+      lock.unlock();
     }
   }
 
   public int[] search(String name) {
-    lock.readLock().lock();
+    lock.lock();
     try {
-      int[] seats = reservations.get(name);
-      return seats == null ? MethodResponse.NOT_FOUND : seats;
+      return store.get(name).seatMap();
+    } catch (UnknownReservationException e) {
+      return MethodResponse.NOT_FOUND;
     } finally {
-      lock.readLock().unlock();
+      lock.unlock();
     }
 
   }
 
   public int[] delete(String name) {
-    lock.writeLock().lock();
+    lock.lock();
     try {
-      if (reservations.get(name) != MethodResponse.NOT_FOUND) {
-        return freeSeats(reservations.remove(name));
-      }
+      return store.remove(name).seatMap();
+    } catch (UnknownReservationException e) {
       return MethodResponse.NOT_FOUND;
     } finally {
-      lock.writeLock().unlock();
+      lock.unlock();
     }
   }
 
-  private int[] freeSeats(int[] seats) {
-    for (Integer index : seats) {
-      allSeats.get(index).vacant = true;
+  public int[] replicateDelete(String name) {
+    try {
+      return store.updateReplicaRemove(name).seatMap();
+    } catch (UnknownReservationException e) {
+      throw new IllegalStateException("A replicate delete command has failed as server: " + info.id
+          + " did not have the reservation in question.");
     }
-    freeSeats.addAndGet(seats.length);
-    return seats;
   }
 
-  private int[] findVacant(int count) {
-    int[] vacant = new int[count];
-    int index = 0;
-    for (Seat seat : allSeats) {
-      if (seat.vacant) {
-        seat.vacant = false;
-        vacant[index++] = seat.number;
-      }
-      if (index == count) {
-        break;
-      }
+  public int[] replicatePut(String name, int count) {
+    try {
+      return store.updateReplicaPut(name, count).seatMap();
+    } catch (NotEnoughSeatsException e) {
+      throw new IllegalStateException("Inconsistent State", e);
+    } catch (DuplicateNameException e) {
+      throw new IllegalStateException("Inconsistent State", e);
     }
-    freeSeats.addAndGet(-count);
-    return vacant;
   }
 
-  public int id() {
-    return this.id;
+  public void receive(Message<?> msg) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  public ServerInfo getInfo() {
+    return this.info;
   }
 }

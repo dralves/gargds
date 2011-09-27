@@ -14,4 +14,9 @@ public class MutexAck implements Writable {
   public void write(DataOutput out) throws IOException {
   }
 
+  @Override
+  public String toString() {
+    return "MutexAck []";
+  }
+
 }
