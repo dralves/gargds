@@ -12,28 +12,37 @@ import edu.ut.dsi.tickets.MethodResponse;
 
 public class TicketClient {
 
-  private int    port;
-  private String address;
-  private Socket socket;
+  private int     port;
+  private String  address;
+  private Socket  socket;
+  private boolean existingSocket;
 
-  public TicketClient(String serverAddress, int port) {
+  public TicketClient(String serverAddress, int port) throws UnknownHostException, IOException {
     this.address = serverAddress;
     this.port = port;
+    this.existingSocket = false;
+    connect();
+  }
+
+  public TicketClient(Socket socket) {
+    this.socket = socket;
+    this.existingSocket = true;
   }
 
   private void connect() throws UnknownHostException, IOException {
-    if (socket == null) {
-      this.socket = new Socket();
-      this.socket.connect(new InetSocketAddress(this.address, this.port));
-    }
+    this.socket = new Socket();
+    this.socket.connect(new InetSocketAddress(this.address, this.port));
   }
 
   public MethodResponse send(MethodRequest request) throws IOException {
-    connect();
     request.write(new DataOutputStream(socket.getOutputStream()));
     MethodResponse response = new MethodResponse();
     response.read(new DataInputStream(socket.getInputStream()));
     return response;
+  }
+
+  public boolean isExistingSocket() {
+    return existingSocket;
   }
 
 }

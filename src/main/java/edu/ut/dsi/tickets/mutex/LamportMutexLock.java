@@ -72,16 +72,25 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
   }
 
   public void receive(Message<?> msg) {
+    LOG.debug("Process " + clock.myId() + " received message at " + clock.time() + " remote Pid: " + msg.senderId()
+        + " remote clock: " + msg.ts().time + " message type: " + msg.type());
     clock.newInMsg(msg);
     switch (msg.type()) {
       case CS_REQ:
+        queue[msg.senderId()] = ((MutexReq) msg.value()).qi;
+        LOG.debug("Process " + clock.myId() + " received CS request from " + msg.senderId() + " at " + clock.time()
+            + " and is about to ack.");
         comms.send(msg.senderId(), clock.newOutMsg(MsgType.ACK, new MutexAck()));
         break;
       case CS_REL:
         queue[msg.senderId()] = Integer.MAX_VALUE;
+        LOG.debug("Process " + clock.myId() + " received CS release from " + msg.senderId() + " at " + clock.time());
         break;
       case ACK:
-        // do nothing
+        LOG.debug("Process " + clock.myId() + " received ACK from " + msg.senderId() + " at " + clock.time());
+        break;
+      case JOIN:
+        LOG.debug("Process " + clock.myId() + " received JOIN from " + msg.senderId() + " at " + clock.time());
         break;
       default:
         throw new IllegalStateException();

@@ -1,11 +1,25 @@
 package edu.ut.dsi.tickets.server;
 
-public class ServerInfo {
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-  public final String address;
-  public final int    clientPort;
-  public final int    serverPort;
-  public final int    id;
+import edu.ut.dsi.tickets.Writable;
+
+public class ServerInfo implements Writable {
+
+  public String  address;
+  public int     clientPort;
+  public int     serverPort;
+  public int     id;
+  public boolean failed;
+
+  public ServerInfo() {
+  }
+
+  ServerInfo(int id) {
+    this(null, -1, -1, id);
+  }
 
   public ServerInfo(String address, int clientPort, int serverPort, int id) {
     super();
@@ -13,13 +27,28 @@ public class ServerInfo {
     this.clientPort = clientPort;
     this.serverPort = serverPort;
     this.id = id;
+    this.failed = false;
   }
 
-  ServerInfo(int id) {
-    this.id = id;
-    this.address = null;
-    this.serverPort = -1;
-    this.clientPort = -1;
+  public void read(DataInput in) throws IOException {
+    this.id = in.readInt();
+    if (in.readBoolean()) {
+      this.address = in.readUTF();
+    }
+    this.serverPort = in.readInt();
+    this.clientPort = in.readInt();
+    this.failed = in.readBoolean();
+  }
+
+  public void write(DataOutput out) throws IOException {
+    out.writeInt(this.id);
+    out.writeBoolean(this.address != null);
+    if (this.address != null) {
+      out.writeUTF(this.address);
+    }
+    out.writeInt(this.serverPort);
+    out.writeInt(this.clientPort);
+    out.writeBoolean(failed);
   }
 
   @Override
@@ -47,7 +76,7 @@ public class ServerInfo {
   @Override
   public String toString() {
     return "ServerInfo [address=" + address + ", clientPort=" + clientPort + ", serverPort=" + serverPort + ", id="
-        + id + "]";
+        + id + ", failed=" + failed + "]";
   }
 
 }

@@ -8,6 +8,7 @@ import edu.ut.dsi.tickets.mutex.Clock.Timestamp;
 import edu.ut.dsi.tickets.mutex.MutexAck;
 import edu.ut.dsi.tickets.mutex.MutexRel;
 import edu.ut.dsi.tickets.mutex.MutexReq;
+import edu.ut.dsi.tickets.server.ServerInfo;
 
 /**
  * A wrapper for any mesasge that includes a timestamp, in order to deal with clocks.
@@ -28,7 +29,8 @@ public class Message<T extends Writable> implements Writable {
     RESPONSE(MethodResponse.class),
     CS_REQ(MutexReq.class),
     CS_REL(MutexRel.class),
-    ACK(MutexAck.class);
+    ACK(MutexAck.class),
+    JOIN(ServerInfo.class);
 
     Class<? extends Writable> payloadClass;
 
@@ -89,6 +91,10 @@ public class Message<T extends Writable> implements Writable {
 
   public Timestamp ts() {
     return ts;
+  }
+
+  public T value() {
+    return value;
   }
 
   @Override
