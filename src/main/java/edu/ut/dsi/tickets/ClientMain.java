@@ -3,6 +3,7 @@ package edu.ut.dsi.tickets;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import edu.ut.dsi.tickets.MethodRequest.Method;
@@ -25,6 +26,7 @@ public class ClientMain {
 			Method method;
 			String name;
 			MethodRequest request;
+			MethodResponse response;
 			try {
 				System.out.print("Method? (RESERVE,SEARCH,DELETE): ");
 				method = Method.valueOf(reader.readLine().trim().toUpperCase());
@@ -36,16 +38,16 @@ public class ClientMain {
 				} else {
 					request = new MethodRequest(method, name);
 				}
+			
+			String[] serverConfig = servers[0].split(":");
+			String serverName = serverConfig[0];
+			String serverPort = serverConfig[1];
+			TicketClient client = new TicketClient(serverName, Integer.parseInt(serverPort));
+			 response = processRequest(request,client,servers);
 			} catch (Exception e) {
 				System.out.println("Error building request.");
 				continue;
 			}
-			String[] serverConfig = servers[0].split(":");
-			String serverName = serverConfig[0];
-			String serverPort = serverConfig[1];
-			TicketClient client = new TicketClient(serverName, Integer.parseInt(serverPort),Integer.parseInt(timeOut));
-			MethodResponse response = processRequest(request,client,servers);
-
 			if (arrayEquals(response.values(), MethodResponse.NOT_FOUND)) {
 				switch (method) {
 				case RESERVE:
@@ -81,7 +83,7 @@ public class ClientMain {
 		}
 	}
 
-	private static MethodResponse processRequest(MethodRequest request,TicketClient client,String[] knownServers) {
+	private static MethodResponse processRequest(MethodRequest request,TicketClient client,String[] knownServers) throws NumberFormatException, UnknownHostException, IOException {
 		MethodResponse response = null;
 		try{
 			response = client.send(request);
@@ -97,7 +99,7 @@ public class ClientMain {
 					String[] serverConfig = knownServers[i].split(":");
 					String serverName = serverConfig[0];
 					String serverPort = serverConfig[1];
-					client = new TicketClient(serverName, Integer.parseInt(serverPort),client.getTimeOut());
+					client = new TicketClient(serverName, Integer.parseInt(serverPort));
 					servers[i] = null;
 					response = processRequest(request, client,servers);
 				}

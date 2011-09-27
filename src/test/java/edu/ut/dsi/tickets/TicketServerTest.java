@@ -36,7 +36,7 @@ public abstract class TicketServerTest {
   @Rule
   public ErrorCollector         collector = new ErrorCollector();
 
-  // @After1
+  @After
   public void dump() {
     StringBuilder sb = new StringBuilder();
     Map<Thread, StackTraceElement[]> stacks = Thread.getAllStackTraces();
@@ -58,7 +58,7 @@ public abstract class TicketServerTest {
         arrayEquals(seats, MethodResponse.NOT_FOUND));
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 2000)
   public void testReserve() throws IOException {
     int[] seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));

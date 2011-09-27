@@ -8,9 +8,10 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,10 +19,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Maps;
+
+import edu.ut.dsi.tickets.FailureContingencyCallback;
+import edu.ut.dsi.tickets.FailureDetector;
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.MethodRequest;
 import edu.ut.dsi.tickets.MethodResponse;
 import edu.ut.dsi.tickets.NamedThreadFactory;
+import edu.ut.dsi.tickets.PerfectFailureDetector;
 import edu.ut.dsi.tickets.client.TicketClient;
 import edu.ut.dsi.tickets.mutex.LamportMutexLock;
 
@@ -66,7 +73,6 @@ public class Comms {
           r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
-        // handle FailureDetector here
         LOG.error(
             "Exception handling request [" + request + "]." + e.getClass().getSimpleName() + " message: "
                 + e.getMessage(), e);
@@ -76,31 +82,48 @@ public class Comms {
   }
 
   private class ServerRequestHandler implements Runnable {
-    private final Socket              socket;
-    private final TicketServerReplica server;
+    private final Socket             socket;
+    private final ReservationManager local;
+    private ServerInfo               remote;
 
-    public ServerRequestHandler(TicketServerReplica server, Socket socket) {
+    public ServerRequestHandler(ReservationManager server, Socket socket) {
       this.socket = socket;
-      this.server = server;
+      this.local = server;
     }
 
     public void run() {
       initMDCforCurrentThread();
+      MethodRequest request;
       try {
         while (true) {
-          MethodRequest request = new MethodRequest();
+          request = new MethodRequest();
           request.read(new DataInputStream(socket.getInputStream()));
           LOG.debug("Server Request: " + request);
           switch (request.method()) {
             case REPLICATE_PUT:
-              this.server.replicatePut(request.name(), request.count());
+              this.local.replicatePut(request.name(), request.count());
               break;
             case REPLICATE_DELETE:
-              this.server.replicateDelete(request.name());
+              this.local.replicateDelete(request.name());
               break;
             case RECEIVE:
               lock.receive(request.msg());
               break;
+            case JOIN:
+              Message<ServerInfo> msg = request.msg();
+              this.remote = getInfoById(msg.senderId());
+              LOG.debug("Received join request [RemotePid: " + msg.senderId() + " was failed: " + this.remote.failed
+                  + "].");
+              synchronized (otherServers) {
+                if (this.remote.failed) {
+                  this.remote.failed = false;
+                }
+                otherServers.put(this.remote, new RemoteReplica(new TicketClient(socket), remote, me));
+              }
+              LOG.debug("Updating lock and clock on join request.");
+              lock.receive(msg);
+              LOG.debug("Process " + this.remote.id + " join completed");
+              continue;
             default:
               throw new IllegalStateException();
           }
@@ -110,7 +133,7 @@ public class Comms {
         }
       } catch (Exception e) {
         LOG.error("Exception handling request" + e.getClass().getSimpleName() + " message: " + e.getMessage(), e);
-        throw new RuntimeException(e);
+        fd.suspect(remote.id, e);
       }
     }
   }
@@ -123,7 +146,8 @@ public class Comms {
   private ExecutorService                      clientAcceptorExecutor;
   private ExecutorService                      serverAcceptorExecutor;
   private ServerInfo                           me;
-  private Map<ServerInfo, TicketServerReplica> others;
+  private Map<ServerInfo, TicketServerReplica> otherServers;
+  private FailureDetector                      fd;
   private LamportMutexLock                     lock;
 
   public Comms(ReservationManager resMgmt, ServerInfo me) {
@@ -133,26 +157,88 @@ public class Comms {
   public Comms(ReservationManager resMgmt, ServerInfo me, List<ServerInfo> others) {
     this.resMgmt = resMgmt;
     this.me = me;
-    if (others != null) {
-      this.others = new LinkedHashMap<ServerInfo, TicketServerReplica>();
-      for (ServerInfo server : others) {
-        if (server.id != me.id) {
-          this.others.put(server, new RemoteReplica(new TicketClient(server.address, server.serverPort), server));
-        }
+    this.fd = new PerfectFailureDetector();
+    this.fd.setFailureContingencyCallback(new ServerFC());
+    this.otherServers = new HashMap<ServerInfo, TicketServerReplica>();
+    for (ServerInfo other : others) {
+      if (other.id != me.id) {
+        otherServers.put(other, null);
       }
     }
   }
 
-  public void setLock(LamportMutexLock lock) {
-    this.lock = lock;
+  public void sendToAll(Message<?> msg) {
+    LOG.debug("Sending message to all servers.");
+    for (ServerInfo ticketServer : remoteServers()) {
+      try {
+        LOG.debug("Sending Message to server. [Msg: " + msg + ", Server: " + ticketServer + "]");
+        getReplica(ticketServer).receive(msg);
+        LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + ticketServer + "]");
+      } catch (IOException e) {
+        LOG.error("Error sending to process: " + ticketServer, e);
+        fd.suspect(ticketServer.id, e);
+      }
+    }
   }
 
-  public void start() throws IOException {
-    startClientComms();
-    if (others != null) {
-      startServerComms();
+  public void send(int targetId, Message<?> msg) {
+    ServerInfo remote = getInfoById(targetId);
+    try {
+      LOG.debug("Sending Message to server. [Msg: " + msg + ", Server: " + remote + "]");
+      getReplica(remote).receive(msg);
+      LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + remote + "]");
+    } catch (IOException e) {
+      // HandleFailureDetector here
+      LOG.error("Error sending to process: " + remote, e);
+      fd.suspect(remote.id, e);
     }
-    System.out.println("Server " + me.id + " started.");
+  }
+
+  public void putAll(String name, int count) {
+    LOG.debug("Sending PUT messages to replicas. [" + name + "]");
+    for (ServerInfo ticketServer : remoteServers()) {
+      try {
+        LOG.debug("Sending PUT messages to replica: " + ticketServer);
+        getReplica(ticketServer).replicatePut(name, count);
+      } catch (IOException e) {
+        LOG.error("Error sending to process: " + ticketServer, e);
+        fd.suspect(ticketServer.id, e);
+      }
+    }
+  }
+
+  public void removeAll(String name) {
+    LOG.debug("Sending DELETE messages to replicas. [" + name + "]");
+    for (ServerInfo ticketServer : remoteServers()) {
+      try {
+        getReplica(ticketServer).replicateDelete(name);
+      } catch (IOException e) {
+        LOG.error("Error sending to process: " + ticketServer, e);
+        fd.suspect(ticketServer.id, e);
+      }
+    }
+  }
+
+  private TicketServerReplica getReplica(ServerInfo remote) throws IOException {
+    synchronized (otherServers) {
+      TicketServerReplica replica = otherServers.get(remote);
+      if (replica == null) {
+        replica = new RemoteReplica(new TicketClient(remote.address, remote.serverPort), remote, me);
+        otherServers.put(remote, replica);
+      }
+      return replica;
+    }
+  }
+
+  private class ServerFC implements FailureContingencyCallback {
+
+    public void failed(int pid) {
+      synchronized (otherServers) {
+        ServerInfo info = getInfoById(pid);
+        info.failed = true;
+        otherServers.put(info, null);
+      }
+    }
   }
 
   public void startClientComms() throws IOException {
@@ -174,7 +260,7 @@ public class Comms {
             clientHandlers.submit(new ClientRequestHandler(resMgmt, socket));
           }
         } catch (IOException e) {
-          // handle FailureDetector here
+          LOG.error("Error in Client Acceptor", e);
           throw new RuntimeException("Error in server acceptor thread.", e);
         }
       }
@@ -204,11 +290,23 @@ public class Comms {
             serverHandlers.submit(new ServerRequestHandler(resMgmt, socket));
           }
         } catch (IOException e) {
-          // handle FailureDetector here
+          LOG.error("Error in Server Acceptor", e);
           throw new RuntimeException("Error in client acceptor thread.", e);
         }
       }
     });
+  }
+
+  public void setLock(LamportMutexLock lock) {
+    this.lock = lock;
+  }
+
+  public void start() throws IOException {
+    startClientComms();
+    if (otherServers != null) {
+      startServerComms();
+    }
+    System.out.println("Server " + me.id + " started.");
   }
 
   public void stop() throws IOException {
@@ -228,57 +326,34 @@ public class Comms {
     serverSS.close();
   }
 
-  public void sendToAll(Message<?> msg) {
-    for (TicketServerReplica replica : others.values()) {
-      try {
-        LOG.debug("Sending msg[" + msg + "] to server: " + replica);
-        replica.receive(msg);
-      } catch (IOException e) {
-        // HandleFailureDetector here
-        LOG.error("Error sending to all.", e);
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  public void send(int senderId, Message<?> msg) {
-    try {
-      others.get(new ServerInfo(senderId)).receive(msg);
-    } catch (IOException e) {
-      // HandleFailureDetector here
-      LOG.error("Error sending to process: " + senderId, e);
-      throw new RuntimeException(e);
-    }
-  }
-
+  /**
+   * Returns non-failed remote servers
+   * 
+   * @return
+   */
   public Collection<ServerInfo> remoteServers() {
-    return this.others.keySet();
-  }
-
-  public void putAll(String name, int count) {
-    LOG.debug("Sending PUT messages to replicas.");
-    for (TicketServerReplica replica : others.values()) {
-      try {
-        LOG.debug("Sending PUT messages to replica: " + replica.getInfo());
-        replica.replicatePut(name, count);
-      } catch (IOException e) {
-        // HandleFailureDetector here
-        LOG.error("Error sending to process: " + replica.getInfo(), e);
-        throw new RuntimeException(e);
+    synchronized (otherServers) {
+      Collection<ServerInfo> remoteServers = Maps.filterEntries(otherServers,
+          new Predicate<Map.Entry<ServerInfo, TicketServerReplica>>() {
+            public boolean apply(Entry<ServerInfo, TicketServerReplica> input) {
+              return !input.getKey().failed;
+            }
+          }).keySet();
+      if (remoteServers.size() < 1) {
+        LOG.error("At least one server must be alive.");
+        throw new IllegalStateException("At least one server must be alive.");
       }
+      return remoteServers;
     }
   }
 
-  public void removeAll(String name) {
-    for (TicketServerReplica replica : others.values()) {
-      try {
-        replica.replicateDelete(name);
-      } catch (IOException e) {
-        // HandleFailureDetector here
-        LOG.error("Error sending to process: " + replica.getInfo(), e);
-        throw new RuntimeException(e);
+  public ServerInfo getInfoById(int id) {
+    for (ServerInfo server : remoteServers()) {
+      if (server.id == id) {
+        return server;
       }
     }
-  }
+    return null;
 
+  }
 }
