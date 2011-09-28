@@ -20,6 +20,8 @@ public class ClientMain {
     String[] servers = null;
     if (allServers != null && !allServers.trim().equals("") && allServers.contains(";")) {
       servers = allServers.split(";");
+    } else {
+      throw new IllegalStateException();
     }
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
     while (true) {
