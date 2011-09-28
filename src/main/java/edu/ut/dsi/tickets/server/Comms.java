@@ -308,7 +308,6 @@ public class Comms {
     for (ServerInfo info : remoteServers()) {
       RemoteReplica replica = getReplica(info);
       replica.receive(new Message<ServerInfo>(MsgType.JOIN, new Timestamp(0), me.id, me));
-      // serverHandlers.submit(new ServerRequestHandler(resMgmt, replica.client().socket()));
     }
   }
 

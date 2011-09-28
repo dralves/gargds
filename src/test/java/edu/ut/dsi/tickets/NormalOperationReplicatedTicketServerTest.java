@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.junit.BeforeClass;
-import org.junit.Test;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -62,11 +61,6 @@ public class NormalOperationReplicatedTicketServerTest extends TicketServerTest 
     TicketServer server2 = new RemoteServer(new TicketClient("localhost", 60010));
     TicketServer server3 = new RemoteServer(new TicketClient("localhost", 60020));
     server = new MultiServer(Lists.newArrayList(server1, server2, server3));// , server3));// , server2, server3));
-  }
-
-  @Test
-  public void testReserve() throws IOException {
-    super.testReserve();
   }
 
 }

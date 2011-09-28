@@ -9,7 +9,6 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
@@ -36,7 +35,7 @@ public abstract class TicketServerTest {
   @Rule
   public ErrorCollector         collector = new ErrorCollector();
 
-  @After
+  // @After
   public void dump() {
     StringBuilder sb = new StringBuilder();
     Map<Thread, StackTraceElement[]> stacks = Thread.getAllStackTraces();
