@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 
 import edu.ut.dsi.tickets.client.RemoteServer;
 import edu.ut.dsi.tickets.client.TicketClient;
+import edu.ut.dsi.tickets.server.Comms;
 import edu.ut.dsi.tickets.server.TicketServer;
 
 /**
@@ -44,21 +45,28 @@ public class NormalOperationReplicatedTicketServerTest extends TicketServerTest 
     }
   }
 
+  private static Comms comms1;
+  private static Comms comms2;
+  private static Comms comms3;
+
   @BeforeClass
   public static void setUp() throws Exception {
-    String servers = "localhost:60000:61000;localhost:60010:61010";// ;localhost:60020:61020";
-    new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
-    new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
-    // new ServerMain().start(2 + "", "localhost", "60020", "61020", servers);
+    String servers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
+    comms1 = new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
+    comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
+    comms3 = new ServerMain().start(2 + "", "localhost", "60020", "61020", servers);
+    comms1.join();
+    comms2.join();
+    comms3.join();
     TicketServer server1 = new RemoteServer(new TicketClient("localhost", 60000));
     TicketServer server2 = new RemoteServer(new TicketClient("localhost", 60010));
-    // TicketServer server3 = new RemoteServer(new TicketClient("localhost", 60020));
-    server = new MultiServer(Lists.newArrayList(server1, server2));
+    TicketServer server3 = new RemoteServer(new TicketClient("localhost", 60020));
+    server = new MultiServer(Lists.newArrayList(server1, server2, server3));// , server3));// , server2, server3));
   }
 
   @Test
-  public void testReserve() {
-
+  public void testReserve() throws IOException {
+    super.testReserve();
   }
 
 }

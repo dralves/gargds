@@ -12,6 +12,6 @@ public interface TicketServerReplica {
 
   public int[] replicateDelete(String name) throws IOException;
 
-  public void receive(Message<?> msg) throws IOException;
+  public Message<?> receive(Message<?> msg) throws IOException;
 
 }

@@ -7,6 +7,7 @@ import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,10 +42,10 @@ public class Comms {
 
   private class ClientRequestHandler implements Runnable {
 
-    private final Socket       socket;
-    private final TicketServer server;
+    private final Socket             socket;
+    private final ReservationManager server;
 
-    public ClientRequestHandler(TicketServer server, Socket socket) {
+    public ClientRequestHandler(ReservationManager server, Socket socket) {
       this.socket = socket;
       this.server = server;
     }
@@ -113,18 +114,7 @@ public class Comms {
               break;
             case RECEIVE:
               response = lock.receive(request.msg());
-              this.remote = getInfoById(msg.senderId());
-              LOG.debug("Received join request [RemotePid: " + msg.senderId() + " was failed: " + this.remote.failed
-                  + "].");
-              synchronized (otherServers) {
-                if (this.remote.failed) {
-                  this.remote.failed = false;
-                }
-                otherServers.put(this.remote, new RemoteReplica(new TicketClient(socket), remote, me));
-              }
-              LOG.debug("Updating lock and clock on join request.");
-              lock.receive(request.msg());
-              LOG.debug("Process " + this.remote.id + " join completed");
+              this.remote = getInfoById(request.msg().senderId());
               break;
             default:
               throw new IllegalStateException();
@@ -145,17 +135,17 @@ public class Comms {
     }
   }
 
-  private final ReservationManager             resMgmt;
-  private ExecutorService                      clientHandlers;
-  private ExecutorService                      serverHandlers;
-  private ServerSocket                         clientSS;
-  private ServerSocket                         serverSS;
-  private ExecutorService                      clientAcceptorExecutor;
-  private ExecutorService                      serverAcceptorExecutor;
-  private ServerInfo                           me;
-  private Map<ServerInfo, TicketServerReplica> otherServers;
-  private FailureDetector                      fd;
-  private LamportMutexLock                     lock;
+  private final ReservationManager       resMgmt;
+  private ExecutorService                clientHandlers;
+  private ExecutorService                serverHandlers;
+  private ServerSocket                   clientSS;
+  private ServerSocket                   serverSS;
+  private ExecutorService                clientAcceptorExecutor;
+  private ExecutorService                serverAcceptorExecutor;
+  private ServerInfo                     me;
+  private Map<ServerInfo, RemoteReplica> otherServers;
+  private FailureDetector                fd;
+  private LamportMutexLock               lock;
 
   public Comms(ReservationManager resMgmt, ServerInfo me) throws IOException {
     this(resMgmt, me, null);
@@ -166,26 +156,34 @@ public class Comms {
     this.me = me;
     this.fd = new PerfectFailureDetector();
     this.fd.setFailureContingencyCallback(new ServerFC());
-    this.otherServers = Collections.synchronizedMap(new HashMap<ServerInfo, TicketServerReplica>());
-  }
-
-  public void sendToAll(Message<?> msg) {
-    LOG.debug("Sending message to all servers.");
-    for (ServerInfo ticketServer : remoteServers()) {
-      send(ticketServer.id, msg);
+    this.otherServers = Collections.synchronizedMap(new HashMap<ServerInfo, RemoteReplica>());
+    for (ServerInfo server : others) {
+      if (server.id != me.id) {
+        this.otherServers.put(server, null);
+      }
     }
   }
 
-  public void send(int targetId, Message<?> msg) {
+  public List<Message<?>> sendToAll(Message<?> msg) {
+    LOG.debug("Sending message to all servers.");
+    List<Message<?>> responses = new ArrayList<Message<?>>();
+    for (ServerInfo ticketServer : remoteServers()) {
+      responses.add(send(ticketServer.id, msg));
+    }
+    return responses;
+  }
+
+  public Message<?> send(int targetId, Message<?> msg) {
     ServerInfo remote = getInfoById(targetId);
     try {
       LOG.debug("Sending Message to server. [Msg: " + msg + ", Server: " + remote + "]");
-      getReplica(remote).receive(msg);
-      LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + remote + "]");
+      return getReplica(remote).receive(msg);
+      // LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + remote + "]");
     } catch (IOException e) {
       LOG.error("Error sending to process: " + remote, e);
       fd.suspect(remote.id, e);
     }
+    return null;
   }
 
   public void putAll(String name, int count) {
@@ -213,15 +211,14 @@ public class Comms {
     }
   }
 
-  private TicketServerReplica getReplica(ServerInfo remote) throws IOException {
+  private RemoteReplica getReplica(ServerInfo remote) throws IOException {
     synchronized (otherServers) {
-      TicketServerReplica replica = otherServers.get(remote);
+      RemoteReplica replica = otherServers.get(remote);
       if (replica == null) {
         TicketClient client = new TicketClient(remote.address, remote.serverPort);
         client.connect();
         LOG.debug("Created new RemoteReplica for " + remote);
         replica = new RemoteReplica(client, remote, me);
-        serverHandlers.submit(new ServerRequestHandler(resMgmt, client.socket()));
         otherServers.put(remote, replica);
       }
       return replica;
@@ -309,8 +306,9 @@ public class Comms {
 
   public void join() throws IOException {
     for (ServerInfo info : remoteServers()) {
-      TicketServerReplica replica = getReplica(info);
+      RemoteReplica replica = getReplica(info);
       replica.receive(new Message<ServerInfo>(MsgType.JOIN, new Timestamp(0), me.id, me));
+      // serverHandlers.submit(new ServerRequestHandler(resMgmt, replica.client().socket()));
     }
   }
 
@@ -331,16 +329,20 @@ public class Comms {
     serverSS.close();
   }
 
+  public Collection<ServerInfo> remoteServers() {
+    return this.otherServers.keySet();
+  }
+
   /**
    * Returns non-failed remote servers
    * 
    * @return
    */
-  public Collection<ServerInfo> remoteServers() {
+  public Collection<ServerInfo> remoteAliveServers() {
     synchronized (otherServers) {
       Collection<ServerInfo> remoteServers = Maps.filterEntries(otherServers,
-          new Predicate<Map.Entry<ServerInfo, TicketServerReplica>>() {
-            public boolean apply(Entry<ServerInfo, TicketServerReplica> input) {
+          new Predicate<Map.Entry<ServerInfo, RemoteReplica>>() {
+            public boolean apply(Entry<ServerInfo, RemoteReplica> input) {
               return !input.getKey().failed;
             }
           }).keySet();

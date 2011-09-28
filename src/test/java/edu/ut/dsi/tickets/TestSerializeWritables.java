@@ -34,4 +34,10 @@ public class TestSerializeWritables {
     System.out.println(serialized);
   }
 
+  @Test
+  public void testSerializeReceiveJoinResponse() throws Exception {
+    MethodResponse respone = new MethodResponse(new int[0]);
+    testSerializeWritable(respone);
+  }
+
 }

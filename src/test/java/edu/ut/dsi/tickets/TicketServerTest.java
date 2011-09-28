@@ -62,12 +62,15 @@ public abstract class TicketServerTest {
   public void testReserve() throws IOException {
     int[] seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
+    System.out.println("ALICE");
     seats = server.reserve("bob", 2);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 1, 2 }));
+    System.out.println("BOB");
     seats = server.reserve("carl", 3);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 3, 4, 5 }));
+    System.out.println("CARL");
     seats = server.reserve("david", 4);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));

@@ -37,12 +37,16 @@ public class RemoteReplica implements TicketServerReplica {
     return this.client.send(new MethodRequest(Method.REPLICATE_PUT, name, count)).values();
   }
 
-  public void receive(Message<?> msg) throws IOException {
-    this.client.send(new MethodRequest(Method.RECEIVE, msg));
+  public Message<?> receive(Message<?> msg) throws IOException {
+    return this.client.send(new MethodRequest(Method.RECEIVE, msg)).msg();
   }
 
   @Override
   public String toString() {
     return this.remote.toString();
+  }
+
+  public TicketClient client() {
+    return this.client;
   }
 }

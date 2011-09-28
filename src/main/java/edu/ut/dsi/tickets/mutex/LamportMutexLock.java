@@ -1,5 +1,6 @@
 package edu.ut.dsi.tickets.mutex;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -47,7 +48,10 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     LOG.debug("Process " + clock.myId() + " trying to aquire the lock at time: " + clock.time());
     Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REQ, new MutexReq(queue[myId]));
     LOG.debug("Process " + clock.myId() + " broadcasting desire to acquire lock at time: " + clock.time());
-    comms.sendToAll(msg);
+    List<Message<?>> responses = comms.sendToAll(msg);
+    for (Message<?> response : responses) {
+      receive(response);
+    }
     while (!okCS()) {
       LOG.debug("Process " + clock.myId() + " waiting to aquire the lock at time: " + clock.time());
       myWait();
