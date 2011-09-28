@@ -18,8 +18,7 @@ public class MethodRequest implements Writable {
     DELETE,
     REPLICATE_PUT,
     REPLICATE_DELETE,
-    RECEIVE,
-    JOIN
+    RECEIVE;
   }
 
   private Method     method;
@@ -59,7 +58,7 @@ public class MethodRequest implements Writable {
         output.writeInt(count);
         break;
       case RECEIVE:
-      case JOIN:
+        //      case JOIN:
         msg.write(output);
         break;
       default:
@@ -81,7 +80,7 @@ public class MethodRequest implements Writable {
         this.count = in.readInt();
         break;
       case RECEIVE:
-      case JOIN:
+//      case JOIN:
         this.msg = new Message();
         this.msg.read(in);
         break;

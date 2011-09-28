@@ -7,15 +7,20 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.ut.dsi.tickets.MethodRequest;
 import edu.ut.dsi.tickets.MethodResponse;
 
 public class TicketClient {
 
-  private int     port;
-  private String  address;
-  private Socket  socket;
-  private boolean existingSocket;
+  private static final Logger LOG = LoggerFactory.getLogger(TicketClient.class);
+
+  private int                 port;
+  private String              address;
+  private Socket              socket;
+  private boolean             existingSocket;
 
   public TicketClient(String serverAddress, int port) throws UnknownHostException, IOException {
     this.address = serverAddress;
@@ -39,10 +44,10 @@ public class TicketClient {
 
   public MethodResponse send(MethodRequest request) throws IOException {
     request.write(new DataOutputStream(socket.getOutputStream()));
-    // System.out.println("REQ WROTE: " + request);
+    LOG.error("REQ WROTE: " + request);
     MethodResponse response = new MethodResponse();
     response.read(new DataInputStream(socket.getInputStream()));
-    // System.out.println("RESP READ: " + request);
+    LOG.error("RESP READ: " + request);
     return response;
   }
 

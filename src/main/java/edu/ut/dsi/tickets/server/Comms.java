@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +26,13 @@ import com.google.common.collect.Maps;
 import edu.ut.dsi.tickets.FailureContingencyCallback;
 import edu.ut.dsi.tickets.FailureDetector;
 import edu.ut.dsi.tickets.Message;
+import edu.ut.dsi.tickets.Message.MsgType;
 import edu.ut.dsi.tickets.MethodRequest;
 import edu.ut.dsi.tickets.MethodResponse;
 import edu.ut.dsi.tickets.NamedThreadFactory;
 import edu.ut.dsi.tickets.PerfectFailureDetector;
 import edu.ut.dsi.tickets.client.TicketClient;
+import edu.ut.dsi.tickets.mutex.Clock.Timestamp;
 import edu.ut.dsi.tickets.mutex.LamportMutexLock;
 
 public class Comms {
@@ -100,6 +103,7 @@ public class Comms {
           LOG.debug("Ready to accept server requests");
           request.read(new DataInputStream(socket.getInputStream()));
           LOG.debug("Server Request: " + request);
+          Message<?> response = null;
           switch (request.method()) {
             case REPLICATE_PUT:
               this.local.replicatePut(request.name(), request.count());
@@ -108,10 +112,7 @@ public class Comms {
               this.local.replicateDelete(request.name());
               break;
             case RECEIVE:
-              lock.receive(request.msg());
-              break;
-            case JOIN:
-              Message<ServerInfo> msg = request.msg();
+              response = lock.receive(request.msg());
               this.remote = getInfoById(msg.senderId());
               LOG.debug("Received join request [RemotePid: " + msg.senderId() + " was failed: " + this.remote.failed
                   + "].");
@@ -122,18 +123,23 @@ public class Comms {
                 otherServers.put(this.remote, new RemoteReplica(new TicketClient(socket), remote, me));
               }
               LOG.debug("Updating lock and clock on join request.");
-              lock.receive(msg);
+              lock.receive(request.msg());
               LOG.debug("Process " + this.remote.id + " join completed");
               break;
             default:
               throw new IllegalStateException();
           }
-          MethodResponse r = new MethodResponse(new int[0]);
+          MethodResponse r;
+          if (response != null) {
+            r = new MethodResponse(response);
+          } else {
+            r = new MethodResponse(new int[0]);
+          }
           LOG.debug("Server Response[Req:" + request + "]: " + r);
           r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
-        LOG.error("Exception handling request" + e.getClass().getSimpleName() + " message: " + e.getMessage(), e);
+        LOG.error("Exception handling request " + e.getClass().getSimpleName() + " message: " + e.getMessage(), e);
         fd.suspect(remote.id, e);
       }
     }
@@ -151,21 +157,16 @@ public class Comms {
   private FailureDetector                      fd;
   private LamportMutexLock                     lock;
 
-  public Comms(ReservationManager resMgmt, ServerInfo me) {
+  public Comms(ReservationManager resMgmt, ServerInfo me) throws IOException {
     this(resMgmt, me, null);
   }
 
-  public Comms(ReservationManager resMgmt, ServerInfo me, List<ServerInfo> others) {
+  public Comms(ReservationManager resMgmt, ServerInfo me, List<ServerInfo> others) throws IOException {
     this.resMgmt = resMgmt;
     this.me = me;
     this.fd = new PerfectFailureDetector();
     this.fd.setFailureContingencyCallback(new ServerFC());
-    this.otherServers = new HashMap<ServerInfo, TicketServerReplica>();
-    for (ServerInfo other : others) {
-      if (other.id != me.id) {
-        otherServers.put(other, null);
-      }
-    }
+    this.otherServers = Collections.synchronizedMap(new HashMap<ServerInfo, TicketServerReplica>());
   }
 
   public void sendToAll(Message<?> msg) {
@@ -220,7 +221,6 @@ public class Comms {
         client.connect();
         LOG.debug("Created new RemoteReplica for " + remote);
         replica = new RemoteReplica(client, remote, me);
-        LOG.debug("Created handler for new socket for " + remote);
         serverHandlers.submit(new ServerRequestHandler(resMgmt, client.socket()));
         otherServers.put(remote, replica);
       }
@@ -305,6 +305,13 @@ public class Comms {
       startServerComms();
     }
     System.out.println("Server " + me.id + " started.");
+  }
+
+  public void join() throws IOException {
+    for (ServerInfo info : remoteServers()) {
+      TicketServerReplica replica = getReplica(info);
+      replica.receive(new Message<ServerInfo>(MsgType.JOIN, new Timestamp(0), me.id, me));
+    }
   }
 
   public void stop() throws IOException {

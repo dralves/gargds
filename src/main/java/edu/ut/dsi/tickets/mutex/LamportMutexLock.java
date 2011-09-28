@@ -71,7 +71,7 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     LOG.debug("Process " + clock.myId() + " released the lock at time: " + clock.time());
   }
 
-  public void receive(Message<?> msg) {
+  public Message<MutexAck> receive(Message<?> msg) {
     LOG.debug("Process " + clock.myId() + " received message at " + clock.time() + " remote Pid: " + msg.senderId()
         + " remote clock: " + msg.ts().time + " message type: " + msg.type());
     clock.newInMsg(msg);
@@ -80,8 +80,8 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
         queue[msg.senderId()] = ((MutexReq) msg.value()).qi;
         LOG.debug("Process " + clock.myId() + " received CS request from " + msg.senderId() + " at " + clock.time()
             + " and is about to ACK.");
-        comms.send(msg.senderId(), clock.newOutMsg(MsgType.ACK, new MutexAck()));
-        break;
+        // comms.send(msg.senderId(), clock.newOutMsg(MsgType.ACK, new MutexAck()));
+        return clock.newOutMsg(MsgType.ACK, new MutexAck());
       case CS_REL:
         queue[msg.senderId()] = Integer.MAX_VALUE;
         LOG.debug("Process " + clock.myId() + " received CS release from " + msg.senderId() + " at " + clock.time());
@@ -98,7 +98,7 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     synchronized (clock) {
       clock.notify();
     }
-
+    return null;
   }
 
   private boolean okCS() {
