@@ -182,7 +182,6 @@ public class Comms {
       getReplica(remote).receive(msg);
       LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + remote + "]");
     } catch (IOException e) {
-      // HandleFailureDetector here
       LOG.error("Error sending to process: " + remote, e);
       fd.suspect(remote.id, e);
     }
@@ -219,8 +218,10 @@ public class Comms {
       if (replica == null) {
         TicketClient client = new TicketClient(remote.address, remote.serverPort);
         client.connect();
-        serverHandlers.submit(new ServerRequestHandler(resMgmt, client.socket()));
+        LOG.debug("Created new RemoteReplica for " + remote);
         replica = new RemoteReplica(client, remote, me);
+        LOG.debug("Created handler for new socket for " + remote);
+        serverHandlers.submit(new ServerRequestHandler(resMgmt, client.socket()));
         otherServers.put(remote, replica);
       }
       return replica;
