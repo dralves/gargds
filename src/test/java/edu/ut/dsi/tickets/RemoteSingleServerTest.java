@@ -12,7 +12,7 @@ public class RemoteSingleServerTest extends TicketServerTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    ServerMain.main(1 + "", "localhost", "60000");
+    new ServerMain().start(1 + "", "localhost", "60000");
     server = new RemoteServer(new TicketClient("localhost", 60000));
   }
 

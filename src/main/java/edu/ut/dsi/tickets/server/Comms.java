@@ -180,10 +180,12 @@ public class Comms {
     this.me = me;
     this.fd = new PerfectFailureDetector();
     this.fd.setFailureContingencyCallback(new ServerFC());
-    this.otherServers = Collections.synchronizedMap(new HashMap<ServerInfo, RemoteReplica>());
-    for (ServerInfo server : others) {
-      if (server.id != me.id) {
-        this.otherServers.put(server, null);
+    if (others != null) {
+      this.otherServers = Collections.synchronizedMap(new HashMap<ServerInfo, RemoteReplica>());
+      for (ServerInfo server : others) {
+        if (server.id != me.id) {
+          this.otherServers.put(server, null);
+        }
       }
     }
   }

@@ -10,7 +10,7 @@ public class DeadlockTest {
 
   @Test(timeout = 200000)
   public void testDeadlock() throws Exception {
-    ServerMain.main(1 + "", "localhost", "60000");
+    new ServerMain().start(1 + "", "localhost", "60000");
     TicketServer client1 = new RemoteServer(new TicketClient("localhost", 60000));
     TicketServer client2 = new RemoteServer(new TicketClient("localhost", 60000));
     client1.reserve("david", 10);
