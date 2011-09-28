@@ -97,6 +97,7 @@ public class Comms {
       try {
         while (true) {
           request = new MethodRequest();
+          LOG.debug("Ready to accept server requests");
           request.read(new DataInputStream(socket.getInputStream()));
           LOG.debug("Server Request: " + request);
           switch (request.method()) {
@@ -218,11 +219,8 @@ public class Comms {
       if (replica == null) {
         TicketClient client = new TicketClient(remote.address, remote.serverPort);
         client.connect();
-
         serverHandlers.submit(new ServerRequestHandler(resMgmt, client.socket()));
-
         replica = new RemoteReplica(client, remote, me);
-
         otherServers.put(remote, replica);
       }
       return replica;

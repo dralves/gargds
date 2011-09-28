@@ -19,10 +19,12 @@ public class ServerMain {
 
   public synchronized static void main(String... args) throws Exception {
     Comms comms = new ServerMain().start(args);
-    comms.wait();
+    synchronized (comms) {
+      comms.wait();
+    }
   }
 
-  public Comms start(String[] args) throws IOException {
+  public Comms start(String... args) throws IOException {
     int assgnmt = Integer.parseInt(args[0]);
     String address = args[1];
     int clientPort = Integer.parseInt(args[2]);

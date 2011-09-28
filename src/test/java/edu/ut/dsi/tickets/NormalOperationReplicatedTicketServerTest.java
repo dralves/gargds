@@ -44,11 +44,11 @@ public class NormalOperationReplicatedTicketServerTest extends TicketServerTest 
   }
 
   @BeforeClass
-  public static void setUp() throws IOException {
+  public static void setUp() throws Exception {
     String servers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
-    ServerMain.main(2 + "", "localhost", "60000", "61000", servers);
-    ServerMain.main(2 + "", "localhost", "60010", "61010", servers);
-    ServerMain.main(2 + "", "localhost", "60020", "61020", servers);
+    new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
+    new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
+    new ServerMain().start(2 + "", "localhost", "60020", "61020", servers);
     TicketServer server1 = new RemoteServer(new TicketClient("localhost", 60000));
     TicketServer server2 = new RemoteServer(new TicketClient("localhost", 60010));
     TicketServer server3 = new RemoteServer(new TicketClient("localhost", 60020));
