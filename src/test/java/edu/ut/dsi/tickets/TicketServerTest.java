@@ -9,6 +9,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
@@ -121,6 +122,11 @@ public abstract class TicketServerTest {
     int[] result = server.reserve("harry", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(result) + ")",
         arrayEquals(result, MethodResponse.NOT_FOUND));
+  }
+
+  @AfterClass
+  public static void sleep() throws Exception {
+    Thread.sleep(1000);
   }
 
   private boolean arrayEquals(int[] a1, int[] a2) {
