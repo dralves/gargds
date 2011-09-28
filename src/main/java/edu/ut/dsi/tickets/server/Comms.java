@@ -109,7 +109,6 @@ public class Comms {
         while (true) {
           try {
             request = new MethodRequest();
-            LOG.debug("Ready to accept server requests");
             request.read(new DataInputStream(socket.getInputStream()));
             LOG.debug("Server Request: " + request);
             Message<?> response = null;

@@ -1,8 +1,10 @@
 package edu.ut.dsi.tickets.server.reservations;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A local implementation of a store. Methods are synchronized to ensure memory visibility only.
@@ -12,15 +14,15 @@ import java.util.List;
  */
 public class LocalReservationStore implements ReservationStore {
 
-  protected HashMap<String, Reservation> map;
-  private ArrayList<Seat>                seats;
+  protected Map<String, Reservation> map;
+  private ArrayList<Seat>            seats;
 
   public LocalReservationStore(int numSeats) {
     this.seats = new ArrayList<Seat>();
     for (int i = 0; i < numSeats; i++) {
       seats.add(new Seat(i));
     }
-    this.map = new HashMap<String, Reservation>();
+    this.map = Collections.synchronizedMap(new HashMap<String, Reservation>());
   }
 
   public synchronized Reservation get(String name) throws UnknownReservationException {
@@ -53,7 +55,7 @@ public class LocalReservationStore implements ReservationStore {
   }
 
   public synchronized Reservation remove(String name) throws UnknownReservationException {
-    Reservation reservation = map.get(name);
+    Reservation reservation = map.remove(name);
     if (reservation == null) {
       throw new UnknownReservationException(name);
     }
@@ -75,7 +77,7 @@ public class LocalReservationStore implements ReservationStore {
     throw new UnsupportedOperationException();
   }
 
-  public HashMap<String, Reservation> rawMap() {
+  public Map<String, Reservation> rawMap() {
     return map;
   }
 

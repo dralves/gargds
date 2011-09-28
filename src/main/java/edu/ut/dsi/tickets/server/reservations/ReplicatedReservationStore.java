@@ -1,6 +1,5 @@
 package edu.ut.dsi.tickets.server.reservations;
 
-import java.io.IOException;
 import java.util.HashMap;
 
 import edu.ut.dsi.tickets.server.Comms;

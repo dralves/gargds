@@ -1,6 +1,6 @@
 package edu.ut.dsi.tickets.server.reservations;
 
-import java.util.HashMap;
+import java.util.Map;
 
 /**
  * An interface for the storage medium for the reservations. For assigment1 a simple Map was enough but assignement 2
@@ -23,6 +23,6 @@ public interface ReservationStore {
 
   public void replicaUpdate();
 
-  public HashMap<String, Reservation> rawMap();
+  public Map<String, Reservation> rawMap();
 
 }

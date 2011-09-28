@@ -1,7 +1,7 @@
 package edu.ut.dsi.tickets.server;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
 import edu.ut.dsi.tickets.Message;
@@ -96,7 +96,7 @@ public class ReservationManager implements TicketServer, TicketServerReplica {
     }
   }
 
-  public HashMap<String, Reservation> currentSeatMap() {
+  public Map<String, Reservation> currentSeatMap() {
     return store.rawMap();
   }
 }

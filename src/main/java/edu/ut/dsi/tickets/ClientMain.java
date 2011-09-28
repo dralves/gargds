@@ -15,16 +15,11 @@ public class ClientMain {
     String serverName = args[0];
     String serverPort = args[1];
     String allServers = null;
-    // String timeOut = "5"; // in seconds
-    // if (allServers == null)
     if (args.length > 2)
       allServers = args[2];
-    // allServers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
     String[] servers = null;
     if (allServers != null && !allServers.trim().equals("") && allServers.contains(";")) {
       servers = allServers.split(";");
-      // for(String s : servers)
-      // knownServers.add(s);
     }
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
     while (true) {
@@ -44,9 +39,6 @@ public class ClientMain {
           request = new MethodRequest(method, name);
         }
 
-        // String[] serverConfig = servers[0].split(":");
-        // String serverName = serverConfig[0];
-        // String serverPort = serverConfig[1];
         TicketClient client = new TicketClient(serverName, Integer.parseInt(serverPort));
         client.connect();
         response = processRequest(request, client, servers);

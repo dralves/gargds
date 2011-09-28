@@ -9,7 +9,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Map;
 
 import edu.ut.dsi.tickets.server.reservations.Reservation;
 
@@ -21,11 +21,11 @@ import edu.ut.dsi.tickets.server.reservations.Reservation;
  */
 public class MethodResponse implements Writable {
 
-  private int[]                        values;
-  private Message<?>                   payload;
-  private HashMap<String, Reservation> seatMap;
-  public static final int[]            ERROR     = new int[] { -2 };
-  public static final int[]            NOT_FOUND = new int[] { -1 };
+  private int[]                    values;
+  private Message<?>               payload;
+  private Map<String, Reservation> seatMap;
+  public static final int[]        ERROR     = new int[] { -2 };
+  public static final int[]        NOT_FOUND = new int[] { -1 };
 
   public MethodResponse() {
   }
@@ -38,14 +38,14 @@ public class MethodResponse implements Writable {
     this.payload = response;
   }
 
-  public MethodResponse(HashMap<String, Reservation> currentSeatMap) {
+  public MethodResponse(Map<String, Reservation> currentSeatMap) {
     this.seatMap = currentSeatMap;
   }
 
   public void write(DataOutput out) throws IOException {
     if (seatMap != null) {
       out.writeInt(-1);
-      serializeWritable(seatMap, out);
+      serializeWritable((Serializable) seatMap, out);
       return;
     } else {
       out.writeInt(0);
@@ -63,6 +63,7 @@ public class MethodResponse implements Writable {
 
   }
 
+  @SuppressWarnings("rawtypes")
   public void read(DataInput in) throws IOException {
     int read = in.readInt();
     if (read == -1) {
@@ -88,7 +89,7 @@ public class MethodResponse implements Writable {
     return payload;
   }
 
-  public HashMap<String, Reservation> getSeatMap() {
+  public Map<String, Reservation> getSeatMap() {
     return seatMap;
   }
 

@@ -91,9 +91,20 @@ public abstract class TicketServerTest {
   }
 
   @Test(timeout = 100000)
-  public void testDelete() throws IOException {
+  public void testDelete() throws Exception {
+
+    server.delete("alice");
+    int[] seats = server.search("alice");
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { -1 }));
+
+    server.reserve("alice", 1);
+    seats = server.search("alice");
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { -0 }));
+
     // empty some seats (from a full server)
-    int[] seats = server.delete("david");
+    seats = server.delete("david");
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
 
