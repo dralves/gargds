@@ -1,6 +1,8 @@
 package edu.ut.dsi.tickets;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
@@ -19,6 +21,11 @@ public class ServerMain {
 
   public synchronized static void main(String... args) throws Exception {
     Comms comms = new ServerMain().start(args);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+    System.out.println("Press any key to start.");
+    reader.readLine();
+    comms.join(Boolean.parseBoolean(args[5]));
+    System.out.println("Server started.");
     synchronized (comms) {
       comms.wait();
     }
@@ -40,6 +47,7 @@ public class ServerMain {
       case 2:
         int serverPort = Integer.parseInt(args[3]);
         List<ServerInfo> servers = servers(args[4]);
+        System.out.println(servers);
         me = findMe(servers, address, serverPort);
         Clock clock = new Clock(me.id, servers.size());
         LamportMutexLock lamportLock = new LamportMutexLock(clock);

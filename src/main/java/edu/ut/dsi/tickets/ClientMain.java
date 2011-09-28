@@ -12,15 +12,20 @@ import edu.ut.dsi.tickets.client.TicketClient;
 public class ClientMain {
 
   public static void main(String[] args) {
-    String allServers = args[0];
-    String timeOut = "5"; // in seconds
-    if (args.length > 1)
-      timeOut = args[1];
-    if (allServers == null)
-      allServers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
-    String[] servers = allServers.split(";");
-    // for(String s : servers)
-    // knownServers.add(s);
+    String serverName = args[0];
+    String serverPort = args[1];
+    String allServers = null;
+    // String timeOut = "5"; // in seconds
+    // if (allServers == null)
+    if (args.length > 2)
+      allServers = args[2];
+    // allServers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
+    String[] servers = null;
+    if (allServers != null && !allServers.trim().equals("") && allServers.contains(";")) {
+      servers = allServers.split(";");
+      // for(String s : servers)
+      // knownServers.add(s);
+    }
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
     while (true) {
       Method method;
@@ -39,13 +44,15 @@ public class ClientMain {
           request = new MethodRequest(method, name);
         }
 
-        String[] serverConfig = servers[0].split(":");
-        String serverName = serverConfig[0];
-        String serverPort = serverConfig[1];
+        // String[] serverConfig = servers[0].split(":");
+        // String serverName = serverConfig[0];
+        // String serverPort = serverConfig[1];
         TicketClient client = new TicketClient(serverName, Integer.parseInt(serverPort));
+        client.connect();
         response = processRequest(request, client, servers);
       } catch (Exception e) {
-        System.out.println("Error building request.");
+        System.out.println("Error building request. " + e.getMessage());
+        e.printStackTrace();
         continue;
       }
       if (arrayEquals(response.values(), MethodResponse.NOT_FOUND)) {
@@ -92,7 +99,7 @@ public class ClientMain {
       // handle time out here too
       response = null;
     }
-    if (response == null) {
+    if (response == null && knownServers != null) {
       int i = knownServers.length - 1;
       String[] servers = new String[knownServers.length];
       for (; i >= 0; i--) {
@@ -101,6 +108,7 @@ public class ClientMain {
           String serverName = serverConfig[0];
           String serverPort = serverConfig[1];
           client = new TicketClient(serverName, Integer.parseInt(serverPort));
+          client.connect();
           servers[i] = null;
           response = processRequest(request, client, servers);
         }

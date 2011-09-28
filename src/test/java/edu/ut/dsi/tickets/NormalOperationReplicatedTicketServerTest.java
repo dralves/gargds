@@ -54,9 +54,9 @@ public class NormalOperationReplicatedTicketServerTest extends TicketServerTest 
     comms1 = new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
     comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
     comms3 = new ServerMain().start(2 + "", "localhost", "60020", "61020", servers);
-    comms1.join();
-    comms2.join();
-    comms3.join();
+    comms1.join(false);
+    comms2.join(false);
+    comms3.join(false);
     TicketServer server1 = new RemoteServer(new TicketClient("localhost", 60000));
     TicketServer server2 = new RemoteServer(new TicketClient("localhost", 60010));
     TicketServer server3 = new RemoteServer(new TicketClient("localhost", 60020));

@@ -1,6 +1,8 @@
 package edu.ut.dsi.tickets.server.reservations;
 
-public class Seat {
+import java.io.Serializable;
+
+public class Seat implements Serializable{
 
   public final int    number;
   private Reservation reservation;

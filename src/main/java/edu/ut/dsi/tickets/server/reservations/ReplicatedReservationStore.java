@@ -1,5 +1,8 @@
 package edu.ut.dsi.tickets.server.reservations;
 
+import java.io.IOException;
+import java.util.HashMap;
+
 import edu.ut.dsi.tickets.server.Comms;
 
 public class ReplicatedReservationStore extends LocalReservationStore {
@@ -36,6 +39,11 @@ public class ReplicatedReservationStore extends LocalReservationStore {
   @Override
   public Reservation updateReplicaRemove(String name) throws UnknownReservationException {
     return super.remove(name);
+  }
+
+  @Override
+  public void replicaUpdate() {
+    super.map = new HashMap<String, Reservation>(comms.getSeatMap());
   }
 
 }

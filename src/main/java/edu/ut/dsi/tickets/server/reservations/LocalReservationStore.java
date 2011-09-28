@@ -12,8 +12,8 @@ import java.util.List;
  */
 public class LocalReservationStore implements ReservationStore {
 
-  private HashMap<String, Reservation> map;
-  private ArrayList<Seat>              seats;
+  protected HashMap<String, Reservation> map;
+  private ArrayList<Seat>                seats;
 
   public LocalReservationStore(int numSeats) {
     this.seats = new ArrayList<Seat>();
@@ -69,6 +69,14 @@ public class LocalReservationStore implements ReservationStore {
 
   public Reservation updateReplicaRemove(String name) throws UnknownReservationException {
     throw new UnsupportedOperationException();
+  }
+
+  public void replicaUpdate() {
+    throw new UnsupportedOperationException();
+  }
+
+  public HashMap<String, Reservation> rawMap() {
+    return map;
   }
 
 }

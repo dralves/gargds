@@ -18,7 +18,8 @@ public class MethodRequest implements Writable {
     DELETE,
     REPLICATE_PUT,
     REPLICATE_DELETE,
-    RECEIVE;
+    RECEIVE,
+    REPLICA_UPDATE;
   }
 
   private Method     method;
@@ -46,6 +47,10 @@ public class MethodRequest implements Writable {
     this.msg = message;
   }
 
+  public MethodRequest(Method method) {
+    this.method = method;
+  }
+
   public void write(DataOutput output) throws IOException {
     output.writeInt(this.method.ordinal());
     switch (this.method) {
@@ -58,8 +63,10 @@ public class MethodRequest implements Writable {
         output.writeInt(count);
         break;
       case RECEIVE:
-        //      case JOIN:
+        // case JOIN:
         msg.write(output);
+        break;
+      case REPLICA_UPDATE:
         break;
       default:
         throw new IllegalStateException();
@@ -80,9 +87,11 @@ public class MethodRequest implements Writable {
         this.count = in.readInt();
         break;
       case RECEIVE:
-//      case JOIN:
+        // case JOIN:
         this.msg = new Message();
         this.msg.read(in);
+        break;
+      case REPLICA_UPDATE:
         break;
       default:
         throw new IllegalStateException();

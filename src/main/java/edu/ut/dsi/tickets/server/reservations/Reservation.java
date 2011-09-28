@@ -1,9 +1,10 @@
 package edu.ut.dsi.tickets.server.reservations;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
-public class Reservation {
+public class Reservation implements Serializable {
   public final String     name;
   public final List<Seat> seats;
 

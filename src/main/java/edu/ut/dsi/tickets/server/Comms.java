@@ -11,9 +11,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,6 +37,7 @@ import edu.ut.dsi.tickets.PerfectFailureDetector;
 import edu.ut.dsi.tickets.client.TicketClient;
 import edu.ut.dsi.tickets.mutex.Clock.Timestamp;
 import edu.ut.dsi.tickets.mutex.LamportMutexLock;
+import edu.ut.dsi.tickets.server.reservations.Reservation;
 
 public class Comms {
 
@@ -77,11 +80,15 @@ public class Comms {
           r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
-        LOG.error(
-            "Exception handling request [" + request + "]." + e.getClass().getSimpleName() + " message: "
-                + e.getMessage(), e);
+        LOG.error("Error in client connection" + e.getMessage());
+        try {
+          this.socket.close();
+        } catch (IOException e1) {
+          e = e1;
+        }
         throw new RuntimeException(e);
       }
+
     }
   }
 
@@ -100,37 +107,53 @@ public class Comms {
       MethodRequest request;
       try {
         while (true) {
-          request = new MethodRequest();
-          LOG.debug("Ready to accept server requests");
-          request.read(new DataInputStream(socket.getInputStream()));
-          LOG.debug("Server Request: " + request);
-          Message<?> response = null;
-          switch (request.method()) {
-            case REPLICATE_PUT:
-              this.local.replicatePut(request.name(), request.count());
-              break;
-            case REPLICATE_DELETE:
-              this.local.replicateDelete(request.name());
-              break;
-            case RECEIVE:
-              response = lock.receive(request.msg());
-              this.remote = getInfoById(request.msg().senderId());
-              break;
-            default:
-              throw new IllegalStateException();
+          try {
+            request = new MethodRequest();
+            LOG.debug("Ready to accept server requests");
+            request.read(new DataInputStream(socket.getInputStream()));
+            LOG.debug("Server Request: " + request);
+            Message<?> response = null;
+            MethodResponse r = null;
+            switch (request.method()) {
+              case REPLICATE_PUT:
+                this.local.replicatePut(request.name(), request.count());
+                break;
+              case REPLICATE_DELETE:
+                this.local.replicateDelete(request.name());
+                break;
+              case RECEIVE:
+                response = lock.receive(request.msg());
+                this.remote = getInfoById(request.msg().senderId());
+                break;
+              case REPLICA_UPDATE:
+                r = new MethodResponse(resMgmt.currentSeatMap());
+                break;
+              default:
+                throw new IllegalStateException();
+            }
+
+            if (response != null) {
+              r = new MethodResponse(response);
+            } else if (r == null) {
+              r = new MethodResponse(new int[0]);
+            }
+            LOG.debug("Server Response[Req:" + request + "]: " + r);
+            r.write(new DataOutputStream(socket.getOutputStream()));
+          } catch (IOException e) {
+            LOG.error("Exception handling request, message: " + e.getMessage());
+            LOG.trace("ST: ", e);
+            fd.suspect(remote.id, e);
+            return;
           }
-          MethodResponse r;
-          if (response != null) {
-            r = new MethodResponse(response);
-          } else {
-            r = new MethodResponse(new int[0]);
-          }
-          LOG.debug("Server Response[Req:" + request + "]: " + r);
-          r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
-        LOG.error("Exception handling request " + e.getClass().getSimpleName() + " message: " + e.getMessage(), e);
-        fd.suspect(remote.id, e);
+        LOG.error("Unexpected error EXITING " + e.getClass().getSimpleName() + " message: " + e.getMessage(), e);
+        try {
+          this.socket.close();
+        } catch (IOException e1) {
+          e = e1;
+        }
+        throw new RuntimeException(e);
       }
     }
   }
@@ -146,6 +169,7 @@ public class Comms {
   private Map<ServerInfo, RemoteReplica> otherServers;
   private FailureDetector                fd;
   private LamportMutexLock               lock;
+  private Set<Socket>                    allSockets = new HashSet<Socket>();
 
   public Comms(ReservationManager resMgmt, ServerInfo me) throws IOException {
     this(resMgmt, me, null);
@@ -167,7 +191,7 @@ public class Comms {
   public List<Message<?>> sendToAll(Message<?> msg) {
     LOG.debug("Sending message to all servers.");
     List<Message<?>> responses = new ArrayList<Message<?>>();
-    for (ServerInfo ticketServer : remoteServers()) {
+    for (ServerInfo ticketServer : remoteAliveServers()) {
       responses.add(send(ticketServer.id, msg));
     }
     return responses;
@@ -188,7 +212,7 @@ public class Comms {
 
   public void putAll(String name, int count) {
     LOG.debug("Sending PUT messages to replicas. [" + name + "]");
-    for (ServerInfo ticketServer : remoteServers()) {
+    for (ServerInfo ticketServer : remoteAliveServers()) {
       try {
         LOG.debug("Sending PUT messages to replica: " + ticketServer);
         getReplica(ticketServer).replicatePut(name, count);
@@ -201,7 +225,7 @@ public class Comms {
 
   public void removeAll(String name) {
     LOG.debug("Sending DELETE messages to replicas. [" + name + "]");
-    for (ServerInfo ticketServer : remoteServers()) {
+    for (ServerInfo ticketServer : remoteAliveServers()) {
       try {
         getReplica(ticketServer).replicateDelete(name);
       } catch (IOException e) {
@@ -217,6 +241,7 @@ public class Comms {
       if (replica == null) {
         TicketClient client = new TicketClient(remote.address, remote.serverPort);
         client.connect();
+        allSockets.add(client.socket());
         LOG.debug("Created new RemoteReplica for " + remote);
         replica = new RemoteReplica(client, remote, me);
         otherServers.put(remote, replica);
@@ -228,10 +253,12 @@ public class Comms {
   private class ServerFC implements FailureContingencyCallback {
 
     public void failed(int pid) {
+      System.err.println("[ME: " + me.id + "]SERVER FAILED: " + pid);
       synchronized (otherServers) {
         ServerInfo info = getInfoById(pid);
         info.failed = true;
         otherServers.put(info, null);
+        lock.fail(pid);
       }
     }
   }
@@ -246,18 +273,24 @@ public class Comms {
     LOG.debug("TicketServer[" + me.id + "] listening for clients on: " + me.address + ":" + me.clientPort);
     this.clientAcceptorExecutor.submit(new Runnable() {
       public void run() {
-        try {
-          initMDCforCurrentThread();
-          while (true) {
+
+        initMDCforCurrentThread();
+        while (true) {
+          try {
             Socket socket = clientSS.accept();
+            allSockets.add(socket);
             InetSocketAddress sa = (InetSocketAddress) socket.getRemoteSocketAddress();
             LOG.debug("New client from: " + sa.getHostName() + ":" + sa.getPort());
             clientHandlers.submit(new ClientRequestHandler(resMgmt, socket));
+          } catch (IOException e) {
+            LOG.error("IOE in Client Acceptor");
+            throw new RuntimeException("Error in server acceptor thread.", e);
+          } catch (Exception e) {
+            LOG.error("Unexpected error in Client Acceptor", e);
+            return;
           }
-        } catch (IOException e) {
-          LOG.error("Error in Client Acceptor", e);
-          throw new RuntimeException("Error in server acceptor thread.", e);
         }
+
       }
     });
   }
@@ -276,17 +309,18 @@ public class Comms {
         .newCachedThreadPool(new NamedThreadFactory("Pid: " + this.me.id + " Server Handler"));
     this.serverAcceptorExecutor.submit(new Runnable() {
       public void run() {
-        try {
-          initMDCforCurrentThread();
-          while (true) {
+        initMDCforCurrentThread();
+        while (true) {
+          try {
             Socket socket = serverSS.accept();
+            allSockets.add(socket);
             InetSocketAddress sa = (InetSocketAddress) socket.getRemoteSocketAddress();
             LOG.debug("New server from: " + sa.getHostName() + ":" + sa.getPort());
             serverHandlers.submit(new ServerRequestHandler(resMgmt, socket));
+          } catch (Exception e) {
+            LOG.error("Error in Server Acceptor");
+            return;
           }
-        } catch (IOException e) {
-          LOG.error("Error in Server Acceptor", e);
-          throw new RuntimeException("Error in client acceptor thread.", e);
         }
       }
     });
@@ -304,10 +338,13 @@ public class Comms {
     System.out.println("Server " + me.id + " started.");
   }
 
-  public void join() throws IOException {
+  public void join(boolean updateReplica) throws IOException {
     for (ServerInfo info : remoteServers()) {
       RemoteReplica replica = getReplica(info);
       replica.receive(new Message<ServerInfo>(MsgType.JOIN, new Timestamp(0), me.id, me));
+      if (updateReplica) {
+        this.resMgmt.replicaUpdate();
+      }
     }
   }
 
@@ -315,17 +352,24 @@ public class Comms {
     stopClientComms();
     if (me.serverPort != -1) {
       stopServerComms();
+      for (Socket socket : allSockets) {
+        if (socket != null && !socket.isClosed()) {
+          socket.close();
+        }
+      }
     }
   }
 
   public void stopClientComms() throws IOException {
     clientAcceptorExecutor.shutdownNow();
     clientSS.close();
+    clientHandlers.shutdownNow();
   }
 
   public void stopServerComms() throws IOException {
     serverAcceptorExecutor.shutdownNow();
     serverSS.close();
+    serverHandlers.shutdownNow();
   }
 
   public Collection<ServerInfo> remoteServers() {
@@ -361,5 +405,17 @@ public class Comms {
     }
     return null;
 
+  }
+
+  public Map<? extends String, ? extends Reservation> getSeatMap() {
+    RemoteReplica replica = null;
+    try {
+      replica = getReplica(remoteAliveServers().iterator().next());
+      return replica.replicaUpdate();
+    } catch (IOException e) {
+      // TODO l8r
+      e.printStackTrace();
+    }
+    return null;
   }
 }

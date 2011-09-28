@@ -1,12 +1,14 @@
 package edu.ut.dsi.tickets.server;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.locks.Lock;
 
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.MethodResponse;
 import edu.ut.dsi.tickets.server.reservations.DuplicateNameException;
 import edu.ut.dsi.tickets.server.reservations.NotEnoughSeatsException;
+import edu.ut.dsi.tickets.server.reservations.Reservation;
 import edu.ut.dsi.tickets.server.reservations.ReservationStore;
 import edu.ut.dsi.tickets.server.reservations.UnknownReservationException;
 
@@ -77,11 +79,24 @@ public class ReservationManager implements TicketServer, TicketServerReplica {
     }
   }
 
-  public void receive(Message<?> msg) throws IOException {
+  public Message<?> receive(Message<?> msg) throws IOException {
     throw new UnsupportedOperationException();
   }
 
   public ServerInfo getInfo() {
     return this.info;
+  }
+
+  public void replicaUpdate() {
+    lock.lock();
+    try {
+      store.replicaUpdate();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public HashMap<String, Reservation> currentSeatMap() {
+    return store.rawMap();
   }
 }

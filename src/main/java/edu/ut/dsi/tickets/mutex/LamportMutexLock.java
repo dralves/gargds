@@ -105,6 +105,10 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     return null;
   }
 
+  public void fail(int pid) {
+    queue[pid] = Integer.MAX_VALUE;
+  }
+
   private boolean okCS() {
     for (int i = 0; i < queue.length; i++) {
       if (isGreater(queue[myId], myId, queue[i], i)) {
