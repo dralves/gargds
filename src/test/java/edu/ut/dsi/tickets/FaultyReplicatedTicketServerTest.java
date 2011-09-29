@@ -40,6 +40,7 @@ public class FaultyReplicatedTicketServerTest {
           server = iterator.next();
           return server.delete(name);
         } catch (Exception e) {
+          iterator.remove();
           LOG.info("Server failed, goind to the next available one");
           server = iterator.next();
         }
@@ -53,6 +54,7 @@ public class FaultyReplicatedTicketServerTest {
           server = iterator.next();
           return server.reserve(name, count);
         } catch (Exception e) {
+          iterator.remove();
           LOG.info("Server failed, goind to the next available one");
           server = iterator.next();
         }
@@ -66,6 +68,7 @@ public class FaultyReplicatedTicketServerTest {
           server = iterator.next();
           return server.search(name);
         } catch (Exception e) {
+          iterator.remove();
           LOG.info("Server failed, goind to the next available one");
           server = iterator.next();
         }

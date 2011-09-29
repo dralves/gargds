@@ -1,6 +1,6 @@
 package edu.ut.dsi.tickets.mutex;
 
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -35,11 +35,15 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
 
   public LamportMutexLock(Clock clock) {
     this.clock = clock;
+    this.myId = clock.myId();
   }
 
   public void setComms(Comms comms) {
     this.comms = comms;
     this.queue = new int[comms.remoteServers().size() + 1];
+    for (int i = 0; i < queue.length; i++) {
+      queue[i] = Integer.MAX_VALUE;
+    }
   }
 
   /**
@@ -47,13 +51,15 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
    */
   public void lock() {
     queue[myId] = clock.time();
-    LOG.debug("Process trying to aquire the lock: " + clock);
-    Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REQ, new MutexReq(queue[myId]));
     LOG.debug("Process broadcasting desire to acquire lock: " + clock);
-    List<Message<?>> responses = comms.sendToAll(msg);
-    for (Message<?> response : responses) {
-      receive(response);
+    for (int i = 0; i < queue.length; i++) {
+      if (i != myId) {
+        Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REQ, new MutexReq(queue[myId]));
+        Message<MutexAck> reponse = comms.send(i, msg);
+        receive(reponse);
+      }
     }
+    LOG.debug("Proces wiil try and qcquire the lock: " + clock + " queue: " + Arrays.toString(queue));
     while (!okCS()) {
       LOG.debug("Process waiting to aquire the lock: " + clock);
       myWait();
@@ -61,19 +67,25 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     LOG.debug("Process acquired the lock: " + clock);
   }
 
-  private synchronized void myWait() {
-    try {
-      wait();
-    } catch (InterruptedException e) {
-      System.err.println(e);
+  private void myWait() {
+    synchronized (clock) {
+      try {
+        clock.wait();
+      } catch (InterruptedException e) {
+        System.err.println(e);
+      }
     }
   }
 
   public void unlock() {
     queue[myId] = Integer.MAX_VALUE;
-    Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REL, new MutexReq(queue[myId]));
     LOG.debug("Process about to send lock release messages at time: " + clock);
-    comms.sendToAll(msg);
+    for (int i = 0; i < queue.length; i++) {
+      if (i != myId) {
+        Message<MutexRel> msg = this.clock.newOutMsg(MsgType.CS_REL, new MutexRel(queue[myId]));
+        comms.send(i, msg);
+      }
+    }
     LOG.debug("Process released the lock at time: " + clock);
   }
 
@@ -111,7 +123,9 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     System.err.println("FAILED");
     queue[pid] = Integer.MAX_VALUE;
     clock.newInMsg(new Message<Writable>(null, new Timestamp(-1), pid, null));
-    notify();
+    synchronized (clock) {
+      clock.notify();
+    }
   }
 
   private boolean okCS() {

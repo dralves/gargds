@@ -56,6 +56,7 @@ public class ServerMain {
         manager = new Comms(server, me, servers);
         lamportLock.setComms(manager);
         manager.setLock(lamportLock);
+        manager.setClock(clock);
         store.setComms(manager);
         break;
       default:

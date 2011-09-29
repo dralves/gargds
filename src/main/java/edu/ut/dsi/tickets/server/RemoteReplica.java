@@ -6,6 +6,7 @@ import java.util.Map;
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.MethodRequest;
 import edu.ut.dsi.tickets.MethodRequest.Method;
+import edu.ut.dsi.tickets.Writable;
 import edu.ut.dsi.tickets.client.TicketClient;
 import edu.ut.dsi.tickets.server.reservations.Reservation;
 
@@ -37,8 +38,8 @@ public class RemoteReplica implements TicketServerReplica {
     return this.client.send(new MethodRequest(Method.REPLICATE_PUT, name, count)).values();
   }
 
-  public Message<?> receive(Message<?> msg) throws IOException {
-    return this.client.send(new MethodRequest(Method.LOCK_MSG, msg)).msg();
+  public <T extends Writable> Message<T> receive(Message<?> msg) throws IOException {
+    return (Message<T>) this.client.send(new MethodRequest(Method.LOCK_MSG, msg)).msg();
   }
 
   @Override

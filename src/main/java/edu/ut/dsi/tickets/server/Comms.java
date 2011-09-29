@@ -34,8 +34,9 @@ import edu.ut.dsi.tickets.MethodRequest;
 import edu.ut.dsi.tickets.MethodResponse;
 import edu.ut.dsi.tickets.NamedThreadFactory;
 import edu.ut.dsi.tickets.PerfectFailureDetector;
+import edu.ut.dsi.tickets.Writable;
 import edu.ut.dsi.tickets.client.TicketClient;
-import edu.ut.dsi.tickets.mutex.Clock.Timestamp;
+import edu.ut.dsi.tickets.mutex.Clock;
 import edu.ut.dsi.tickets.mutex.LamportMutexLock;
 import edu.ut.dsi.tickets.server.reservations.Reservation;
 
@@ -80,7 +81,7 @@ public class Comms {
           r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
-        LOG.error("Error in client connection" + e.getMessage());
+        LOG.debug("Error in client connection [me: " + me.id + "]: " + e.getMessage());
         try {
           this.socket.close();
         } catch (IOException e1) {
@@ -169,6 +170,7 @@ public class Comms {
   private FailureDetector                fd;
   private LamportMutexLock               lock;
   private Set<Socket>                    allSockets = new HashSet<Socket>();
+  private Clock                          clock;
 
   public Comms(ReservationManager resMgmt, ServerInfo me) throws IOException {
     this(resMgmt, me, null);
@@ -192,7 +194,6 @@ public class Comms {
   public List<Message<?>> sendToAll(Message<?> msg) {
     synchronized (otherServers) {
       Collection<ServerInfo> servers = remoteAliveServers();
-
       LOG.debug("Sending message to all servers.");
       List<Message<?>> responses = new ArrayList<Message<?>>();
       for (ServerInfo ticketServer : servers) {
@@ -202,10 +203,10 @@ public class Comms {
     }
   }
 
-  public Message<?> send(int targetId, Message<?> msg) {
+  public <T extends Writable> Message<T> send(int targetId, Message<?> msg) {
     ServerInfo remote = getInfoById(targetId);
     try {
-      LOG.debug("Sending Message to server. [Msg: " + msg + ", Server: " + remote + "]");
+      LOG.debug("Sending Message to process: " + targetId + ". [Msg: " + msg + ", Server: " + remote + "]");
       return getReplica(remote).receive(msg);
       // LOG.debug("Message sent without error. [Msg: " + msg + ", Server: " + remote + "]");
     } catch (IOException e) {
@@ -346,7 +347,7 @@ public class Comms {
   public void join(boolean updateReplica) throws IOException {
     for (ServerInfo info : remoteServers()) {
       RemoteReplica replica = getReplica(info);
-      replica.receive(new Message<ServerInfo>(MsgType.JOIN, new Timestamp(0), me.id, me));
+      replica.receive(clock.newOutMsg(MsgType.JOIN, me));
       if (updateReplica) {
         this.resMgmt.replicaUpdate();
       }
@@ -422,5 +423,9 @@ public class Comms {
       e.printStackTrace();
     }
     return null;
+  }
+
+  public void setClock(Clock clock) {
+    this.clock = clock;
   }
 }

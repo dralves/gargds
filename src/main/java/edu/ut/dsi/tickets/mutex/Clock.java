@@ -5,6 +5,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import edu.ut.dsi.tickets.Message;
@@ -20,6 +22,8 @@ import edu.ut.dsi.tickets.Writable;
  * 
  */
 public class Clock {
+
+  private static final Logger LOG = LoggerFactory.getLogger(Clock.class);
 
   public static class Timestamp implements Writable {
 
@@ -57,11 +61,16 @@ public class Clock {
   public Clock(int myId, int numServers) {
     this.clock = new int[numServers];
     this.myId = myId;
+    clock[myId] = 1;
   }
 
   public void tick() {
+    int[] oldClock = new int[clock.length];
+    System.arraycopy(clock, 0, oldClock, 0, clock.length);
     clock[myId]++;
     MDC.put("clock", Arrays.toString(clock));
+    LOG.debug("TICK CLOCK UPDATE[Id: " + myId + "][Old: " + Arrays.toString(oldClock) + "][New: "
+        + Arrays.toString(clock) + "]");
   }
 
   public int time(int procId) {
@@ -77,17 +86,25 @@ public class Clock {
   }
 
   public <T extends Writable> Message<T> newOutMsg(MsgType type, T payload) {
+    int[] oldClock = new int[clock.length];
+    System.arraycopy(clock, 0, oldClock, 0, clock.length);
     Timestamp ts = new Timestamp(time(myId));
     Message<T> msg = new Message<T>(type, ts, myId, payload);
     tick();
     MDC.put("clock", Arrays.toString(clock));
+    LOG.debug("OUT MSG CLOCK UPDATE[Id: " + myId + "][Old: " + Arrays.toString(oldClock) + "][New: "
+        + Arrays.toString(clock) + "]");
     return msg;
   }
 
   public void newInMsg(Message<?> msg) {
+    int[] oldClock = new int[clock.length];
+    System.arraycopy(clock, 0, oldClock, 0, clock.length);
     clock[msg.senderId()] = Math.max(clock[msg.senderId()], msg.ts().value());
-    clock[myId] = Math.max(clock[myId], msg.ts().value());
+    clock[myId] = Math.max(clock[myId], msg.ts().value())+1;
     MDC.put("clock", Arrays.toString(clock));
+    LOG.debug("IN MSG CLOCK UPDATE[Id: " + myId + "][RemId: " + msg.senderId() + "][Old: " + Arrays.toString(oldClock)
+        + "][New: " + Arrays.toString(clock) + "]");
   }
 
   @Override

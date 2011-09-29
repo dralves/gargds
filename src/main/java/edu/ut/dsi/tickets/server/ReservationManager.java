@@ -6,6 +6,7 @@ import java.util.concurrent.locks.Lock;
 
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.MethodResponse;
+import edu.ut.dsi.tickets.Writable;
 import edu.ut.dsi.tickets.server.reservations.DuplicateNameException;
 import edu.ut.dsi.tickets.server.reservations.NotEnoughSeatsException;
 import edu.ut.dsi.tickets.server.reservations.Reservation;
@@ -79,7 +80,7 @@ public class ReservationManager implements TicketServer, TicketServerReplica {
     }
   }
 
-  public Message<?> receive(Message<?> msg) throws IOException {
+  public <T extends Writable> Message<T> receive(Message<?> msg) throws IOException {
     throw new UnsupportedOperationException();
   }
 

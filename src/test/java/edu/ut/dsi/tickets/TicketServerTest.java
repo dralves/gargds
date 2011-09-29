@@ -58,7 +58,7 @@ public abstract class TicketServerTest {
         arrayEquals(seats, MethodResponse.NOT_FOUND));
   }
 
-  @Test(timeout = 2000)
+  @Test
   public void testReserve() throws IOException {
     int[] seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
