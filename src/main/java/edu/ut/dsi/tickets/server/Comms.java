@@ -395,10 +395,6 @@ public class Comms {
               return !input.getKey().failed;
             }
           }).keySet();
-      if (remoteServers.size() < 1) {
-        LOG.error("At least one server must be alive.");
-        throw new IllegalStateException("At least one server must be alive.");
-      }
       return remoteServers;
     }
   }

@@ -7,8 +7,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,8 +80,9 @@ public class FaultyReplicatedTicketServerTest {
   private static MultiServer server;
   private static String      servers;
 
-  @Before
-  public void setUp() throws Exception {
+  @Test
+  public void testFaulty3Servers() throws IOException, InterruptedException {
+
     servers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
     comms1 = new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
     comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
@@ -95,44 +94,30 @@ public class FaultyReplicatedTicketServerTest {
     TicketServer server2 = new RemoteServer(new TicketClient("localhost", 60010));
     TicketServer server3 = new RemoteServer(new TicketClient("localhost", 60020));
     server = new MultiServer(Lists.newArrayList(server1, server2, server3));
-  }
 
-  @After
-  public static void tearDown() throws Exception {
-    comms1.stop();
-    comms2.stop();
-    comms3.stop();
-  }
-
-  @Test
-  public void testFaultiOperation() throws IOException, InterruptedException {
-
-    System.err.println(1);
     int[] seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
-    System.err.println(2);
+
     seats = server.reserve("bob", 2);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 1, 2 }));
-    System.err.println(3);
+
     seats = server.reserve("carl", 3);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 3, 4, 5 }));
-    System.err.println(4);
+
     seats = server.reserve("david", 4);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
-    System.err.println(5);
+
     server.delete("alice");
     seats = server.search("alice");
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { -1 }));
 
-    System.err.println(6);
     Thread.sleep(500);
     comms2.stop();
     Thread.sleep(1000);
-    System.out.println("SHOULD SEE FAILED SERVER");
 
     System.err.println(7);
     server.delete("bob");
@@ -142,27 +127,29 @@ public class FaultyReplicatedTicketServerTest {
     Thread.sleep(1000);
     seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
-    System.out.println("ALICE");
+
     seats = server.reserve("bob", 2);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 1, 2 }));
-    System.out.println("BOB");
+
     seats = server.reserve("carl", 3);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 3, 4, 5 }));
-    System.out.println("CARL");
+
     seats = server.reserve("david", 4);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
 
     comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
     comms2.join(true);
+
     Thread.sleep(1000);
 
     server.delete("alice");
     server.delete("bob");
     server.delete("carl");
     server.delete("david");
+
     seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
 
@@ -177,6 +164,99 @@ public class FaultyReplicatedTicketServerTest {
     seats = server.reserve("david", 4);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
+
+    comms1.stop();
+    comms2.stop();
+    comms3.stop();
+
+  }
+
+  @Test
+  public void testFaulty2Servers() throws IOException, InterruptedException {
+
+    servers = "localhost:60000:61000;localhost:60010:61010";
+
+    comms1 = new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
+    comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
+    comms1.join(false);
+    comms2.join(false);
+
+    TicketServer server1 = new RemoteServer(new TicketClient("localhost", 60000));
+    TicketServer server2 = new RemoteServer(new TicketClient("localhost", 60010));
+    server = new MultiServer(Lists.newArrayList(server1, server2));
+
+    int[] seats = server.reserve("alice", 1);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
+
+    seats = server.reserve("bob", 2);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 1, 2 }));
+
+    seats = server.reserve("carl", 3);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 3, 4, 5 }));
+
+    seats = server.reserve("david", 4);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
+
+    server.delete("alice");
+    seats = server.search("alice");
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { -1 }));
+
+    Thread.sleep(500);
+    comms2.stop();
+    Thread.sleep(1000);
+
+    System.err.println(7);
+    server.delete("bob");
+    server.delete("carl");
+    server.delete("david");
+
+    Thread.sleep(1000);
+    seats = server.reserve("alice", 1);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
+
+    seats = server.reserve("bob", 2);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 1, 2 }));
+
+    seats = server.reserve("carl", 3);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 3, 4, 5 }));
+
+    seats = server.reserve("david", 4);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
+
+    comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
+    comms2.join(true);
+
+    Thread.sleep(1000);
+
+    server.delete("alice");
+    server.delete("bob");
+    server.delete("carl");
+    server.delete("david");
+
+    seats = server.reserve("alice", 1);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
+
+    seats = server.reserve("bob", 2);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 1, 2 }));
+
+    seats = server.reserve("carl", 3);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 3, 4, 5 }));
+
+    seats = server.reserve("david", 4);
+    assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
+        arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
+
+    comms1.stop();
+    comms2.stop();
   }
 
   private boolean arrayEquals(int[] a1, int[] a2) {

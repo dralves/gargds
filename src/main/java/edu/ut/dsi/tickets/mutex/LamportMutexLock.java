@@ -100,7 +100,6 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
         queue[msg.senderId()] = ((MutexReq) msg.value()).qi;
         LOG.debug("Process " + clock.myId() + " received CS request from " + msg.senderId() + " at " + clock.time()
             + " and is about to ACK.");
-        // comms.send(msg.senderId(), clock.newOutMsg(MsgType.ACK, new MutexAck()));
         return clock.newOutMsg(MsgType.ACK, new MutexAck());
       case CS_REL:
         queue[msg.senderId()] = Integer.MAX_VALUE;
@@ -122,7 +121,6 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
   }
 
   public void fail(int pid) {
-    System.err.println("ABOUT TO UPDATE THE CLOCK FOR FAILED PROCESS: " + pid);
     queue[pid] = Integer.MAX_VALUE;
     clock.newInMsg(new Message<Writable>(MsgType.FAILURE, new Timestamp(-1), pid, null));
     synchronized (clock) {

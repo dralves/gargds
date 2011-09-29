@@ -69,8 +69,6 @@ public class Clock {
     System.arraycopy(clock, 0, oldClock, 0, clock.length);
     clock[myId]++;
     MDC.put("clock", Arrays.toString(clock));
-    LOG.debug("TICK CLOCK UPDATE[Id: " + myId + "][Old: " + Arrays.toString(oldClock) + "][New: "
-        + Arrays.toString(clock) + "]");
   }
 
   public int time(int procId) {
@@ -86,20 +84,14 @@ public class Clock {
   }
 
   public <T extends Writable> Message<T> newOutMsg(MsgType type, T payload) {
-    int[] oldClock = new int[clock.length];
-    System.arraycopy(clock, 0, oldClock, 0, clock.length);
     Timestamp ts = new Timestamp(time(myId));
     Message<T> msg = new Message<T>(type, ts, myId, payload);
     tick();
     MDC.put("clock", Arrays.toString(clock));
-    LOG.debug("OUT MSG CLOCK UPDATE[Id: " + myId + "][Old: " + Arrays.toString(oldClock) + "][New: "
-        + Arrays.toString(clock) + "]");
     return msg;
   }
 
   public void newInMsg(Message<?> msg) {
-    int[] oldClock = new int[clock.length];
-    System.arraycopy(clock, 0, oldClock, 0, clock.length);
     if (msg.type() == MsgType.FAILURE) {
       clock[msg.senderId()] = msg.ts().value();
     } else {
@@ -107,8 +99,6 @@ public class Clock {
       clock[myId] = Math.max(clock[myId], msg.ts().value()) + 1;
     }
     MDC.put("clock", Arrays.toString(clock));
-    LOG.debug("IN MSG CLOCK UPDATE[Id: " + myId + "][RemId: " + msg.senderId() + "][Old: " + Arrays.toString(oldClock)
-        + "][New: " + Arrays.toString(clock) + "]");
   }
 
   @Override

@@ -4,7 +4,7 @@
 
 	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
 		<layout>
-			<Pattern>%-4r %-5level Pid:%X{server} Clock:%X{clock} - %msg%n</Pattern>
+			<Pattern>%-4r %-5level Pid:%X{server} - %msg%n</Pattern>
 		</layout>
 	</appender>
 

@@ -38,6 +38,7 @@ public class RemoteReplica implements TicketServerReplica {
     return this.client.send(new MethodRequest(Method.REPLICATE_PUT, name, count)).values();
   }
 
+  @SuppressWarnings("unchecked")
   public <T extends Writable> Message<T> receive(Message<?> msg) throws IOException {
     return (Message<T>) this.client.send(new MethodRequest(Method.LOCK_MSG, msg)).msg();
   }
