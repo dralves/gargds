@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.Message.MsgType;
+import edu.ut.dsi.tickets.Writable;
+import edu.ut.dsi.tickets.mutex.Clock.Timestamp;
 import edu.ut.dsi.tickets.server.Comms;
 
 /**
@@ -45,18 +47,18 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
    */
   public void lock() {
     queue[myId] = clock.time();
-    LOG.debug("Process " + clock.myId() + " trying to aquire the lock at time: " + clock.time());
+    LOG.debug("Process trying to aquire the lock: " + clock);
     Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REQ, new MutexReq(queue[myId]));
-    LOG.debug("Process " + clock.myId() + " broadcasting desire to acquire lock at time: " + clock.time());
+    LOG.debug("Process broadcasting desire to acquire lock: " + clock);
     List<Message<?>> responses = comms.sendToAll(msg);
     for (Message<?> response : responses) {
       receive(response);
     }
     while (!okCS()) {
-      LOG.debug("Process " + clock.myId() + " waiting to aquire the lock at time: " + clock.time());
+      LOG.debug("Process waiting to aquire the lock: " + clock);
       myWait();
     }
-    LOG.debug("Process " + clock.myId() + " acquired the lock at time: " + clock.time());
+    LOG.debug("Process acquired the lock: " + clock);
   }
 
   private synchronized void myWait() {
@@ -70,9 +72,9 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
   public void unlock() {
     queue[myId] = Integer.MAX_VALUE;
     Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REL, new MutexReq(queue[myId]));
-    LOG.debug("Process " + clock.myId() + " about to send lock release messages at time: " + clock.time());
+    LOG.debug("Process about to send lock release messages at time: " + clock);
     comms.sendToAll(msg);
-    LOG.debug("Process " + clock.myId() + " released the lock at time: " + clock.time());
+    LOG.debug("Process released the lock at time: " + clock);
   }
 
   public Message<MutexAck> receive(Message<?> msg) {
@@ -106,7 +108,10 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
   }
 
   public void fail(int pid) {
+    System.err.println("FAILED");
     queue[pid] = Integer.MAX_VALUE;
+    clock.newInMsg(new Message<Writable>(null, new Timestamp(-1), pid, null));
+    notify();
   }
 
   private boolean okCS() {
@@ -121,7 +126,7 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     return true;
   }
 
-  private boolean isGreater(int pid1, int time1, int pid2, int time2) {
+  private boolean isGreater(int time1, int pid1, int time2, int pid2) {
     if (time2 == Integer.MAX_VALUE) {
       return false;
     }

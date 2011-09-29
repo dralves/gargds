@@ -120,12 +120,12 @@ public class Comms {
               case REPLICATE_DELETE:
                 this.local.replicateDelete(request.name());
                 break;
-              case RECEIVE:
-                response = lock.receive(request.msg());
-                this.remote = getInfoById(request.msg().senderId());
-                break;
               case REPLICA_UPDATE:
                 r = new MethodResponse(resMgmt.currentSeatMap());
+                break;
+              case LOCK_MSG:
+                response = lock.receive(request.msg());
+                this.remote = getInfoById(request.msg().senderId());
                 break;
               default:
                 throw new IllegalStateException();
@@ -190,12 +190,16 @@ public class Comms {
   }
 
   public List<Message<?>> sendToAll(Message<?> msg) {
-    LOG.debug("Sending message to all servers.");
-    List<Message<?>> responses = new ArrayList<Message<?>>();
-    for (ServerInfo ticketServer : remoteAliveServers()) {
-      responses.add(send(ticketServer.id, msg));
+    synchronized (otherServers) {
+      Collection<ServerInfo> servers = remoteAliveServers();
+
+      LOG.debug("Sending message to all servers.");
+      List<Message<?>> responses = new ArrayList<Message<?>>();
+      for (ServerInfo ticketServer : servers) {
+        responses.add(send(ticketServer.id, msg));
+      }
+      return responses;
     }
-    return responses;
   }
 
   public Message<?> send(int targetId, Message<?> msg) {

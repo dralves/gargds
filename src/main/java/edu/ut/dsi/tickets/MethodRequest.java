@@ -18,7 +18,7 @@ public class MethodRequest implements Writable {
     DELETE,
     REPLICATE_PUT,
     REPLICATE_DELETE,
-    RECEIVE,
+    LOCK_MSG,
     REPLICA_UPDATE;
   }
 
@@ -62,7 +62,7 @@ public class MethodRequest implements Writable {
         output.writeUTF(name);
         output.writeInt(count);
         break;
-      case RECEIVE:
+      case LOCK_MSG:
         // case JOIN:
         msg.write(output);
         break;
@@ -86,7 +86,7 @@ public class MethodRequest implements Writable {
         this.name = in.readUTF();
         this.count = in.readInt();
         break;
-      case RECEIVE:
+      case LOCK_MSG:
         // case JOIN:
         this.msg = new Message();
         this.msg.read(in);

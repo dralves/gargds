@@ -38,7 +38,7 @@ public class RemoteReplica implements TicketServerReplica {
   }
 
   public Message<?> receive(Message<?> msg) throws IOException {
-    return this.client.send(new MethodRequest(Method.RECEIVE, msg)).msg();
+    return this.client.send(new MethodRequest(Method.LOCK_MSG, msg)).msg();
   }
 
   @Override

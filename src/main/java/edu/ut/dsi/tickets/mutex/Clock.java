@@ -3,6 +3,9 @@ package edu.ut.dsi.tickets.mutex;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
+
+import org.slf4j.MDC;
 
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.Message.MsgType;
@@ -58,6 +61,7 @@ public class Clock {
 
   public void tick() {
     clock[myId]++;
+    MDC.put("clock", Arrays.toString(clock));
   }
 
   public int time(int procId) {
@@ -76,11 +80,19 @@ public class Clock {
     Timestamp ts = new Timestamp(time(myId));
     Message<T> msg = new Message<T>(type, ts, myId, payload);
     tick();
+    MDC.put("clock", Arrays.toString(clock));
     return msg;
   }
 
   public void newInMsg(Message<?> msg) {
     clock[msg.senderId()] = Math.max(clock[msg.senderId()], msg.ts().value());
     clock[myId] = Math.max(clock[myId], msg.ts().value());
+    MDC.put("clock", Arrays.toString(clock));
   }
+
+  @Override
+  public String toString() {
+    return "Clock [clock=" + Arrays.toString(clock) + ", myId=" + myId + "]";
+  }
+
 }

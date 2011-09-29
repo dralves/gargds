@@ -103,30 +103,34 @@ public class FaultyReplicatedTicketServerTest {
 
   @Test
   public void testFaultiOperation() throws IOException, InterruptedException {
+
+    System.err.println(1);
     int[] seats = server.reserve("alice", 1);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")", arrayEquals(seats, new int[] { 0 }));
-
+    System.err.println(2);
     seats = server.reserve("bob", 2);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 1, 2 }));
-
+    System.err.println(3);
     seats = server.reserve("carl", 3);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 3, 4, 5 }));
-
+    System.err.println(4);
     seats = server.reserve("david", 4);
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { 6, 7, 8, 9 }));
-
+    System.err.println(5);
     server.delete("alice");
     seats = server.search("alice");
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { -1 }));
-
+    System.err.println(6);
     Thread.sleep(500);
     comms2.stop();
     Thread.sleep(1000);
+    System.out.println("SHOULD SEE FAILED SERVER");
 
+    System.err.println(7);
     server.delete("bob");
     server.delete("carl");
     server.delete("david");
