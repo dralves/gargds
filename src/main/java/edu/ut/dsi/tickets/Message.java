@@ -30,7 +30,8 @@ public class Message<T extends Writable> implements Writable {
     CS_REQ(MutexReq.class),
     CS_REL(MutexRel.class),
     ACK(MutexAck.class),
-    JOIN(ServerInfo.class);
+    JOIN(ServerInfo.class),
+    FAILURE(MutexAck.class);
 
     Class<? extends Writable> payloadClass;
 

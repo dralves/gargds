@@ -7,8 +7,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,8 +82,8 @@ public class FaultyReplicatedTicketServerTest {
   private static MultiServer server;
   private static String      servers;
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     servers = "localhost:60000:61000;localhost:60010:61010;localhost:60020:61020";
     comms1 = new ServerMain().start(2 + "", "localhost", "60000", "61000", servers);
     comms2 = new ServerMain().start(2 + "", "localhost", "60010", "61010", servers);
@@ -97,7 +97,7 @@ public class FaultyReplicatedTicketServerTest {
     server = new MultiServer(Lists.newArrayList(server1, server2, server3));
   }
 
-  @AfterClass
+  @After
   public static void tearDown() throws Exception {
     comms1.stop();
     comms2.stop();
@@ -127,6 +127,7 @@ public class FaultyReplicatedTicketServerTest {
     seats = server.search("alice");
     assertTrue("The arrays did not match (actual: " + Arrays.toString(seats) + ")",
         arrayEquals(seats, new int[] { -1 }));
+
     System.err.println(6);
     Thread.sleep(500);
     comms2.stop();

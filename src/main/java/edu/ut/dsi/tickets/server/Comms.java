@@ -81,7 +81,7 @@ public class Comms {
           r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
-        LOG.debug("Error in client connection [me: " + me.id + "]: " + e.getMessage());
+        LOG.debug("Error in client connection [me: " + me.id + "]: " + e.getMessage(), e);
         try {
           this.socket.close();
         } catch (IOException e1) {
@@ -358,10 +358,10 @@ public class Comms {
     stopClientComms();
     if (me.serverPort != -1) {
       stopServerComms();
-      for (Socket socket : allSockets) {
-        if (socket != null && !socket.isClosed()) {
-          socket.close();
-        }
+    }
+    for (Socket socket : allSockets) {
+      if (socket != null) {
+        socket.close();
       }
     }
   }

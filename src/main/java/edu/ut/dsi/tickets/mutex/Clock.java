@@ -100,8 +100,12 @@ public class Clock {
   public void newInMsg(Message<?> msg) {
     int[] oldClock = new int[clock.length];
     System.arraycopy(clock, 0, oldClock, 0, clock.length);
-    clock[msg.senderId()] = Math.max(clock[msg.senderId()], msg.ts().value());
-    clock[myId] = Math.max(clock[myId], msg.ts().value())+1;
+    if (msg.type() == MsgType.FAILURE) {
+      clock[msg.senderId()] = msg.ts().value();
+    } else {
+      clock[msg.senderId()] = Math.max(clock[msg.senderId()], msg.ts().value());
+      clock[myId] = Math.max(clock[myId], msg.ts().value()) + 1;
+    }
     MDC.put("clock", Arrays.toString(clock));
     LOG.debug("IN MSG CLOCK UPDATE[Id: " + myId + "][RemId: " + msg.senderId() + "][Old: " + Arrays.toString(oldClock)
         + "][New: " + Arrays.toString(clock) + "]");

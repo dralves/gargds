@@ -53,10 +53,12 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     queue[myId] = clock.time();
     LOG.debug("Process broadcasting desire to acquire lock: " + clock);
     for (int i = 0; i < queue.length; i++) {
-      if (i != myId) {
+      if (i != myId && clock.time(i) != -1) {
         Message<MutexReq> msg = this.clock.newOutMsg(MsgType.CS_REQ, new MutexReq(queue[myId]));
         Message<MutexAck> reponse = comms.send(i, msg);
-        receive(reponse);
+        if (reponse != null) {
+          receive(reponse);
+        }
       }
     }
     LOG.debug("Proces wiil try and qcquire the lock: " + clock + " queue: " + Arrays.toString(queue));
@@ -81,7 +83,7 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
     queue[myId] = Integer.MAX_VALUE;
     LOG.debug("Process about to send lock release messages at time: " + clock);
     for (int i = 0; i < queue.length; i++) {
-      if (i != myId) {
+      if (i != myId && clock.time(i) != -1) {
         Message<MutexRel> msg = this.clock.newOutMsg(MsgType.CS_REL, new MutexRel(queue[myId]));
         comms.send(i, msg);
       }
@@ -120,9 +122,9 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
   }
 
   public void fail(int pid) {
-    System.err.println("FAILED");
+    System.err.println("ABOUT TO UPDATE THE CLOCK FOR FAILED PROCESS: " + pid);
     queue[pid] = Integer.MAX_VALUE;
-    clock.newInMsg(new Message<Writable>(null, new Timestamp(-1), pid, null));
+    clock.newInMsg(new Message<Writable>(MsgType.FAILURE, new Timestamp(-1), pid, null));
     synchronized (clock) {
       clock.notify();
     }
@@ -130,11 +132,13 @@ public class LamportMutexLock implements Lock, ReadWriteLock {
 
   private boolean okCS() {
     for (int i = 0; i < queue.length; i++) {
-      if (isGreater(queue[myId], myId, queue[i], i)) {
-        return false;
-      }
-      if (isGreater(queue[myId], myId, clock.time(i), i)) {
-        return false;
+      if (clock.time(i) != -1) {
+        if (isGreater(queue[myId], myId, queue[i], i)) {
+          return false;
+        }
+        if (isGreater(queue[myId], myId, clock.time(i), i)) {
+          return false;
+        }
       }
     }
     return true;
