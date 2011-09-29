@@ -5,10 +5,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
-
 import edu.ut.dsi.tickets.Message;
 import edu.ut.dsi.tickets.Message.MsgType;
 import edu.ut.dsi.tickets.Writable;
@@ -22,8 +18,6 @@ import edu.ut.dsi.tickets.Writable;
  * 
  */
 public class Clock {
-
-  private static final Logger LOG = LoggerFactory.getLogger(Clock.class);
 
   public static class Timestamp implements Writable {
 
@@ -65,10 +59,7 @@ public class Clock {
   }
 
   public void tick() {
-    int[] oldClock = new int[clock.length];
-    System.arraycopy(clock, 0, oldClock, 0, clock.length);
     clock[myId]++;
-    MDC.put("clock", Arrays.toString(clock));
   }
 
   public int time(int procId) {
@@ -87,7 +78,6 @@ public class Clock {
     Timestamp ts = new Timestamp(time(myId));
     Message<T> msg = new Message<T>(type, ts, myId, payload);
     tick();
-    MDC.put("clock", Arrays.toString(clock));
     return msg;
   }
 
@@ -98,7 +88,6 @@ public class Clock {
       clock[msg.senderId()] = Math.max(clock[msg.senderId()], msg.ts().value());
       clock[myId] = Math.max(clock[myId], msg.ts().value()) + 1;
     }
-    MDC.put("clock", Arrays.toString(clock));
   }
 
   @Override

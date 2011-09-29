@@ -44,10 +44,10 @@ public class TicketClient {
 
   public MethodResponse send(MethodRequest request) throws IOException {
     request.write(new DataOutputStream(socket.getOutputStream()));
-    LOG.debug("REQ WROTE: " + request);
+    LOG.trace("REQ WROTE: " + request);
     MethodResponse response = new MethodResponse();
     response.read(new DataInputStream(socket.getInputStream()));
-    LOG.debug("RESP READ: " + request);
+    LOG.trace("RESP READ: " + request);
     return response;
   }
 

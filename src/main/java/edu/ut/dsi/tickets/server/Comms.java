@@ -61,7 +61,7 @@ public class Comms {
         while (true) {
           request = new MethodRequest();
           request.read(new DataInputStream(socket.getInputStream()));
-          LOG.debug("Client Request: " + request);
+          LOG.trace("Client Request: " + request);
           int[] response = null;
           switch (request.method()) {
             case RESERVE:
@@ -77,7 +77,7 @@ public class Comms {
               throw new IllegalStateException();
           }
           MethodResponse r = new MethodResponse(response);
-          LOG.debug("Response[Req:" + request + "]: " + r);
+          LOG.trace("Response[Req:" + request + "]: " + r);
           r.write(new DataOutputStream(socket.getOutputStream()));
         }
       } catch (Exception e) {
@@ -111,7 +111,7 @@ public class Comms {
           try {
             request = new MethodRequest();
             request.read(new DataInputStream(socket.getInputStream()));
-            LOG.debug("Server Request: " + request);
+            LOG.trace("Server Request: " + request);
             Message<?> response = null;
             MethodResponse r = null;
             switch (request.method()) {
@@ -137,11 +137,10 @@ public class Comms {
             } else if (r == null) {
               r = new MethodResponse(new int[0]);
             }
-            LOG.debug("Server Response[Req:" + request + "]: " + r);
+            LOG.trace("Server Response[Req:" + request + "]: " + r);
             r.write(new DataOutputStream(socket.getOutputStream()));
           } catch (IOException e) {
             LOG.error("Exception handling request, message: " + e.getMessage());
-            LOG.trace("ST: ", e);
             fd.suspect(remote.id, e);
             return;
           }
